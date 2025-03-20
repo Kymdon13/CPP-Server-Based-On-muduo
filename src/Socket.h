@@ -8,6 +8,7 @@ class InetAddr; // forward declaration
 class Socket {
 private:
     int _fd; // socket file descriptor
+    bool _isClosed = false;
 public:
     /// @brief default ctor
     /// @details constructs a new socket and assigns it to _fd
@@ -36,8 +37,20 @@ public:
     /// @param addr the InetAddr instance to connect to
     void connect(InetAddr* addr);
 
-    /// @brief close the socket
-    void close();
+    /// @brief async read,
+    /// @param buf buffer used to store data
+    /// @param n number of bytes you want to read
+    /// @param done if there is no data left in socket, done = true
+    /// @return actual number of bytes read into buf
+    size_t read(void *buf, size_t n, bool &done);
+
+    /// @brief sync read,
+    /// @param buf buffer used to store data
+    /// @param n number of bytes you want to read
+    /// @return actual number of bytes read into buf
+    size_t readSync(void *buf, size_t n);
+
+    size_t writeSync(const void *buf, size_t nbytes);
 
     /// @brief set the socket to non-blocking mode
     void setNonBlocking();
@@ -48,6 +61,11 @@ public:
     /// @brief getter of _fd
     /// @return _fd
     int getFd();
+
+    bool getIsClosed();
+
+    /// @brief close the socket
+    void close();
 };
 
 #endif // SOCKET_H_

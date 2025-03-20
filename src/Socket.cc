@@ -1,5 +1,7 @@
+#include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include "Socket.h"
 #include "InetAddr.h"
@@ -40,6 +42,46 @@ void Socket::connect(InetAddr *addr) {
     errif(::connect(_fd, (struct sockaddr *)&addr->_addr, addr->_addr_len) == -1, "socket connect failed");
 }
 
+size_t Socket::read(void *buf, size_t n, bool &done) {
+    ssize_t read_bytes = ::read(_fd, buf, n);
+    if (read_bytes == -1) { // error
+        if (errno == EAGAIN) {
+            done = true;
+            return 0; // done reading, return safely
+        } else {
+            close();
+            errif(true, "socket read failed");
+        }
+    } else if (read_bytes == 0) { // peer has closed the socket
+        std::cerr << "peer with fd: " << _fd << " has closed socket, closing this socket..." << std::endl;
+        close();
+    }
+    return strlen((char*)buf);
+}
+
+size_t Socket::readSync(void *buf, size_t n) {
+    ssize_t read_bytes = ::read(_fd, buf, n);
+    if (read_bytes == -1) { // error
+        close();
+        errif(true, "socket read failed");
+    } else if (read_bytes == 0) { // peer has closed the socket
+        std::cerr << "peer with fd: " << _fd << " has closed socket, closing this socket..." << std::endl;
+        close();
+        return 0;
+    }
+    return strlen((char*)buf);
+}
+
+size_t Socket::writeSync(const void *buf, size_t nbytes) {
+    ssize_t write_bytes = ::write(_fd, buf, nbytes);
+    if (write_bytes == -1) { // error
+        close();
+        errif(true, "socket send failed");
+    } else if (write_bytes == 0) // no data sent
+        std::cerr << "no data sent" << std::endl;
+    return strlen((char*)buf);
+}
+
 void Socket::setNonBlocking() {
     fcntl(_fd, F_SETFL, fcntl(_fd, F_GETFL) | O_NONBLOCK);
 }
@@ -53,6 +95,11 @@ int Socket::getFd() {
     return _fd;
 }
 
+bool Socket::getIsClosed() {
+    return _isClosed;
+}
+
 void Socket::close() {
     errif(::close(_fd) == -1, "socket close failed");
+    _isClosed = true;
 }

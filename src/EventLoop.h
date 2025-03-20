@@ -13,6 +13,7 @@ public:
     ~EventLoop();
 
     void loop();
+    void loop(bool callOnce);
     void updateChannel(Channel *channel);
     // void removeChannel(Channel *channel);
 };
