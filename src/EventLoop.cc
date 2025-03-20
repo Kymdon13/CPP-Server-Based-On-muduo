@@ -26,6 +26,14 @@ void EventLoop::loop() {
     }
 }
 
+void EventLoop::loop(bool callOnce) {
+    std::vector<Channel*> chs;
+    chs = _ep->poll();
+    for (auto &ch : chs) {
+        ch->handleEvent();
+    }
+}
+
 void EventLoop::updateChannel(Channel *channel) {
     _ep->updateChannel(channel);
 }
