@@ -3,12 +3,14 @@
 
 class Socket;
 class EventLoop;
+class Acceptor;
 
 class Server {
 private:
-    EventLoop *_loop;
+    EventLoop *_el;
+    Acceptor *_acceptor;
 public:
-    Server(EventLoop *loop);
+    Server(EventLoop *el);
     ~Server();
 
     void handleReadEvent(int sockfd_clnt);

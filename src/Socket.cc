@@ -8,10 +8,12 @@
 Socket::Socket() : _fd(-1) {
     _fd = socket(AF_INET, SOCK_STREAM, 0);
     errif(_fd == -1, "socket create failed");
+    setREUSEADDR();
 }
 
 Socket::Socket(int fd) : _fd(fd) {
     errif(_fd == -1, "socket create failed");
+    setREUSEADDR();
 }
 
 Socket::~Socket() {
@@ -40,6 +42,11 @@ void Socket::connect(InetAddr *addr) {
 
 void Socket::setNonBlocking() {
     fcntl(_fd, F_SETFL, fcntl(_fd, F_GETFL) | O_NONBLOCK);
+}
+
+void Socket::setREUSEADDR() {
+    int optval = 1; // non-zero value means using SO_REUSEADDR
+    errif(-1 == setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)), "can not set SO_REUSEADDR");
 }
 
 int Socket::getFd() {

@@ -4,6 +4,7 @@
 #include "Socket.h"
 #include "InetAddr.h"
 #include "Channel.h"
+#include "Acceptor.h"
 
 #include <fcntl.h>
 #include <iostream>
@@ -11,45 +12,37 @@
 #include <string.h>
 #include <unistd.h>
 
-#define READ_BUFFER_SIZE 1024
+#define BUFFER_SIZE 1024
 
-Server::Server(EventLoop *loop) : _loop(loop) {
-    // create a socket
-    Socket *sock_serv = new Socket();
-    // create an address
-    InetAddr *addr_serv = new InetAddr("127.0.0.1", 8888);
-    // set the socket to non-blocking mode
-    sock_serv->setNonBlocking();
-    // bind the socket to the address
-    sock_serv->bind(addr_serv);
-    // listen for incoming connections
-    sock_serv->listen();
-
-    Channel *ch_serv = new Channel(_loop, sock_serv->getFd());
-    // set the callback function for the channel
-    std::function<void()> cb = std::bind(&Server::handleNewConnEvent, this, sock_serv);
-    ch_serv->setCallback(cb);
-    // enable reading on the channel
-    ch_serv->enableReading();
+Server::Server(EventLoop *el) : _el(el), _acceptor(nullptr) {
+    _acceptor = new Acceptor(_el);
+    std::function<void(Socket*)> cb = std::bind(&Server::handleNewConnEvent, this, std::placeholders::_1);
+    _acceptor->setNewConnCallback(cb);
 }
 
-Server::~Server() {}
+Server::~Server() {
+    delete _acceptor;
+}
 
 void Server::handleReadEvent (int sockfd_clnt) {
-    char buffer[64]; // buffer to store received data
+    char buffer[BUFFER_SIZE]; // buffer to store received data
+    ssize_t bytes_read;
     while (true) {
         memset(buffer, 0, sizeof(buffer)); // clear the buffer
         // receives data from the socket and stores it in the buffer
         // then handle the received data
-        ssize_t bytes_read = read(sockfd_clnt, buffer, sizeof(buffer));
-        if (bytes_read > 0) { // success
+        bytes_read = read(sockfd_clnt, buffer, sizeof(buffer));
+
+        if (bytes_read > 0) { // read some data
             std::cout << strlen(buffer) << " bytes received from client:" << buffer << std::endl;
-        } else if (bytes_read == -1 && errno == EINTR) { // interrupted by signal, continue reading
-            continue;
-        } else if (bytes_read == -1 && (errno == EAGAIN || errno == O_NONBLOCK)) { // no data
-            std::cout << "client " << sockfd_clnt << " done reading" << std::endl;
-            break;
-        } else if (bytes_read == -1) { // error
+            // write data to client
+            write(sockfd_clnt, buffer, bytes_read);
+        } else if (bytes_read == -1) {
+            if (errno == EAGAIN) { // has read all data and no data left
+                std::cout << "client " << sockfd_clnt << " done reading" << std::endl;
+                break;
+            }
+            // error
             close(sockfd_clnt);
             break;
         } else if (bytes_read == 0) { // client has closed the socket
@@ -57,8 +50,6 @@ void Server::handleReadEvent (int sockfd_clnt) {
             close(sockfd_clnt);
             break;
         }
-        // write data to client
-        write(sockfd_clnt, buffer, bytes_read);
     }
 }
 
@@ -70,12 +61,12 @@ void Server::handleNewConnEvent(Socket *sock_serv) {
     Socket *sock_clnt = new Socket(sock_serv->accept(addr_clnt));
     sock_clnt->setNonBlocking();
 
-    std::cout << "new client fd: " << sock_clnt->getFd()
-    << " IP: " << inet_ntoa(addr_clnt->_addr.sin_addr)
-    << " Port: " << ntohs(addr_clnt->_addr.sin_port) << std::endl;
+    std::cout << "new client fd: " << sock_clnt->getFd() <<
+        " IP: " << inet_ntoa(addr_clnt->_addr.sin_addr) <<
+        " Port: " << ntohs(addr_clnt->_addr.sin_port) << std::endl;
 
     // FIXME (seems channel will never be deleted)
-    Channel *ch_clnt = new Channel(_loop, sock_clnt->getFd());
+    Channel *ch_clnt = new Channel(_el, sock_clnt->getFd());
 
     // set the callback function for the channel
     std::function<void()> cb = std::bind(&Server::handleReadEvent, this, sock_clnt->getFd());

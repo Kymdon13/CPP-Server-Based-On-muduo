@@ -18,7 +18,7 @@ public:
     Channel(EventLoop *el, int fd);
     ~Channel();
 
-    /// @brief set EPOLLIN | EPOLLET flag for _fd register in _el._ep
+    /// @brief setEvents(EPOLLIN | EPOLLET) and register this channel to Epoll
     void enableReading();
 
     /// @brief getter of _fd

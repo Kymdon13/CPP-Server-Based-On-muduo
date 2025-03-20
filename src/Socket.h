@@ -42,6 +42,9 @@ public:
     /// @brief set the socket to non-blocking mode
     void setNonBlocking();
 
+    /// @brief allow the socket to bind to the same addr:port while the last one is in TIME_WAIT stat
+    void setREUSEADDR();
+
     /// @brief getter of _fd
     /// @return _fd
     int getFd();
