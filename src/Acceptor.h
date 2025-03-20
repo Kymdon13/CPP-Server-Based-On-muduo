@@ -12,7 +12,6 @@ class Acceptor {
 private:
     EventLoop *_el;
     Socket *_sock;
-    InetAddr *_addr;
     Channel *_ch_acceptor;
 public:
     std::function<void(Socket*)> _newConnCallback;

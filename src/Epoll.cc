@@ -24,14 +24,6 @@ Epoll::~Epoll() {
     }
 }
 
-void Epoll::addFd(int fd, uint32_t op) {
-    struct epoll_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.events = op;
-    ev.data.fd = fd;
-    errif(epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll_ctl add event failed");
-}
-
 std::vector<Channel*> Epoll::poll(int timeout) {
     std::vector<Channel*> activeChannels;
     // nfds = -1 means error
@@ -40,8 +32,8 @@ std::vector<Channel*> Epoll::poll(int timeout) {
     for (int i = 0; i < nfds; ++i) {
         // ptr has been set to related channel in updateChannel
         Channel *channel = (Channel*)(_evs[i].data.ptr);
-        // we just set the revents here
-        // TODO the ??? will do the matching work (to see which event is triggered)
+        // we just set the revents to the interested events here
+        // the kernel function ep_send_events will do the matching work (to see which event is triggered)
         channel->setRevents(_evs[i].events);
         activeChannels.push_back(channel);
     }

@@ -4,11 +4,13 @@
 #include "Channel.h"
 #include "Server.h"
 
+#include <iostream>
+
 Acceptor::Acceptor(EventLoop *el) : _el(el) {
     // create a socket
     _sock = new Socket();
     // create an address
-    _addr = new InetAddr("127.0.0.1", 8888);
+    InetAddr *_addr = new InetAddr("127.0.0.1", 8888);
     // set the socket to non-blocking mode
     _sock->setNonBlocking();
     // bind the socket to the address
@@ -22,16 +24,30 @@ Acceptor::Acceptor(EventLoop *el) : _el(el) {
     _ch_acceptor->setCallback(cb);
     // enable reading on the channel
     _ch_acceptor->enableReading();
+
+    delete _addr;
 }
 
 Acceptor::~Acceptor() {
     delete _sock;
-    delete _addr;
     delete _ch_acceptor;
 }
 
 void Acceptor::acceptConn() {
-    _newConnCallback(_sock);
+    InetAddr *addr_clnt = new InetAddr();
+
+    Socket *sock_clnt = new Socket(_sock->accept(addr_clnt));
+    sock_clnt->setNonBlocking();
+
+    std::cout << "new client fd: " << sock_clnt->getFd() <<
+        " IP: " << inet_ntoa(addr_clnt->_addr.sin_addr) <<
+        " Port: " << ntohs(addr_clnt->_addr.sin_port) << std::endl;
+
+    // call the callback
+    _newConnCallback(sock_clnt);
+
+    // release the temp addr_clnt
+    delete addr_clnt;
 }
 
 void Acceptor::setNewConnCallback(std::function<void(Socket*)> cb) {

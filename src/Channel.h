@@ -37,10 +37,6 @@ public:
     /// @return _events
     uint32_t getEvents() const;
 
-    /// @brief setter of _events
-    /// @param events event you want this Channel to monitor
-    void setEvents(uint32_t events);
-
     /// @brief getter of _revents
     /// @return _revents
     uint32_t getRevents() const;

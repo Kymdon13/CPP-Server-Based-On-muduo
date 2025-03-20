@@ -24,8 +24,6 @@ void Channel::setInEpoll(bool inEpoll) { _inEpoll = inEpoll; }
 
 uint32_t Channel::getEvents() const { return _events; }
 
-void Channel::setEvents(uint32_t events) { _events = events; }
-
 uint32_t Channel::getRevents() const { return _revents; }
 
 void Channel::setRevents(uint32_t revents) { _revents = revents; }
