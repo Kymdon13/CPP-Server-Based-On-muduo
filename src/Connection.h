@@ -10,7 +10,6 @@ typedef unsigned __flag_t;
 
 class EventLoop;
 class Socket;
-class InetAddr;
 class Channel;
 class Buffer;
 
@@ -19,9 +18,11 @@ private:
     EventLoop *_el;
     Socket *_sock;
     Channel *_ch;
-    std::string *_inBuffer;
     Buffer *_readBuffer;
     std::function<void(Socket*)> _delConnCallback;
+
+    /// @brief async write function
+    void _send(int sockfd);
 public:
     Connection(EventLoop *el, Socket *sock, __flag_t flag = FLAGECHO);
     ~Connection();
@@ -29,7 +30,7 @@ public:
     void printCallback(Socket *sock);
 
     /// @brief echo message
-    void echoCallback(int sockfd_clnt);
+    void echoCallback(Socket* sock);
 
     /// @brief setter of _delConnCallback
     void setDelConnCallback(std::function<void(Socket*)> cb);

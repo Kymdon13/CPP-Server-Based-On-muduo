@@ -17,11 +17,12 @@ public:
     void addFd(int fd, uint32_t op);
     std::vector<Channel*> poll(int timeout = -1);
 
-    /**
-     * * @brief update the channel in epoll
-     * * @param channel the channel to update
-     */
+    /// @brief update the channel in epoll
+    /// @param channel the channel to update
     void updateChannel(Channel *channel);
+
+    /// @brief delete the channel in epoll
+    void delChannel(Channel *channel);
 };
 
 #endif // EPOLL_H_

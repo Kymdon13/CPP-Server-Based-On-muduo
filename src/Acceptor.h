@@ -13,9 +13,8 @@ private:
     EventLoop *_el;
     Socket *_sock;
     Channel *_ch_acceptor;
-public:
     std::function<void(Socket*)> _newConnCallback;
-
+public:
     Acceptor(EventLoop *el);
     ~Acceptor();
 

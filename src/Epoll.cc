@@ -17,6 +17,7 @@ Epoll::Epoll() : _epfd(-1), _evs(nullptr) { // init with false value
 Epoll::~Epoll() {
     if (_epfd != -1) {
         close(_epfd);
+        _epfd = -1;
     }
     if (_evs != nullptr) {
         delete[] _evs;
@@ -47,9 +48,15 @@ void Epoll::updateChannel(Channel *channel) {
     ev.events = channel->getEvents();
     ev.data.ptr = channel;
     if (!channel->isInEpoll()) { // if the channel is not in epoll
-        errif(epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll_ctl add event failed");
+        errif(epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll_ctl add fd failed");
         channel->setInEpoll(true);
     } else { // if the channel is already in epoll
         errif(epoll_ctl(_epfd, EPOLL_CTL_MOD, fd, &ev) == -1, "epoll_ctl modify event failed");
     }
+}
+
+void Epoll::delChannel(Channel *channel) {
+    int fd = channel->getFd();
+    errif(-1 == epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, NULL), "epoll_ctl delete fd failed");
+    channel->setInEpoll(false);
 }

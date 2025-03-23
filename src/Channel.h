@@ -1,7 +1,6 @@
 #ifndef CHANNEL_H_
 #define CHANNEL_H_
 
-#include <sys/epoll.h>
 #include <functional>
 
 class EventLoop;
@@ -13,13 +12,16 @@ private:
     uint32_t _events;
     uint32_t _revents;
     bool _inEpoll;
-    std::function<void()> _callback;
+    std::function<void()> _readCallback;
+    std::function<void()> _writeCallback;
 public:
     Channel(EventLoop *el, int fd);
     ~Channel();
 
-    /// @brief setEvents(EPOLLIN | EPOLLET) and register this channel to Epoll
+    /// @brief setEvents(EPOLLIN | EPOLLPRI) and register this channel to Epoll
     void enableReading();
+
+    void enableEPOLLET();
 
     /// @brief getter of _fd
     /// @return _fd
@@ -45,12 +47,16 @@ public:
     /// @param revents used by epoll instance
     void setRevents(uint32_t revents);
 
-    /// @brief call the _callback()
+    /// @brief call both the _readCallback and the _writeCallback
     void handleEvent();
 
-    /// @brief register callback function
-    /// @param callback used to set _callback
-    void setCallback(std::function<void()> callback);
+    /// @brief register readCallback function
+    /// @param callback used to set _readCallback
+    void setReadCallback(std::function<void()> callback);
+
+    /// @brief register writeCallback function
+    /// @param callback used to set _writeCallback
+    void setWriteCallback(std::function<void()> callback);
 };
 
 #endif // CHANNEL_H_

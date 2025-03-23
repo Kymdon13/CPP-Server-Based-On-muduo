@@ -40,7 +40,7 @@ int main() {
         std::cerr << bytes_write << " bytes sent to server" << std::endl;
 
         // block on epoll_wait(), true means just handle once
-        loop->loop(true);
+        loop->loopOnce();
     }
 
     delete conn;

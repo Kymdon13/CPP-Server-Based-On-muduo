@@ -56,7 +56,7 @@ size_t Socket::read(void *buf, size_t n, bool &done) {
         std::cerr << "peer with fd: " << _fd << " has closed socket, closing this socket..." << std::endl;
         close();
     }
-    return strlen((char*)buf);
+    return strlen((char*)buf); // FIXME may cause problem if buf contains no bytes or isn't end with '\0'
 }
 
 size_t Socket::readSync(void *buf, size_t n) {
@@ -69,7 +69,7 @@ size_t Socket::readSync(void *buf, size_t n) {
         close();
         return 0;
     }
-    return strlen((char*)buf);
+    return strlen((char*)buf); // FIXME may cause problem if buf contains no bytes or isn't end with '\0'
 }
 
 size_t Socket::writeSync(const void *buf, size_t nbytes) {
@@ -100,6 +100,8 @@ bool Socket::getIsClosed() {
 }
 
 void Socket::close() {
-    errif(::close(_fd) == -1, "socket close failed");
-    _isClosed = true;
+    if (!_isClosed && _fd != -1) {
+        errif(::close(_fd) == -1, "socket close failed");
+        _isClosed = true;
+    }
 }

@@ -6,13 +6,15 @@
 
 #include <iostream>
 
-Acceptor::Acceptor(EventLoop *el) : _el(el) {
-    // create a socket
+Acceptor::Acceptor(EventLoop *el) :
+    _el(el),
+    _sock(nullptr),
+    _ch_acceptor(nullptr)
+{
+    // create a socket, we want a blocking socket now cause accept a connection ain't gonna take too long
     _sock = new Socket();
     // create an address
     InetAddr *_addr = new InetAddr("127.0.0.1", 8888);
-    // set the socket to non-blocking mode
-    _sock->setNonBlocking();
     // bind the socket to the address
     _sock->bind(_addr);
     // listen for incoming connections
@@ -21,9 +23,11 @@ Acceptor::Acceptor(EventLoop *el) : _el(el) {
     _ch_acceptor = new Channel(_el, _sock->getFd());
     // set the callback function for the channel
     std::function<void()> cb = std::bind(&Acceptor::acceptConn, this); // in the calling process of acceptConn we can directly access _sock
-    _ch_acceptor->setCallback(cb);
-    // enable reading on the channel
+    _ch_acceptor->setReadCallback(cb);
+    // enable reading on the channel, and not enable EPOLLET cause we want epoll_wait to return the connection events all the time if they are not handled
     _ch_acceptor->enableReading();
+    // no need to use ThreadPool for such a simple task
+    // _ch_acceptor->setUseThreadPool(false);
 
     delete _addr;
 }
