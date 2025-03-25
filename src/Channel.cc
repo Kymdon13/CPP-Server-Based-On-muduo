@@ -1,57 +1,99 @@
-#include "Epoll.h"
-#include "EventLoop.h"
-#include "Channel.h"
+#include "include/Channel.h"
 
-#include <unistd.h>
 #include <sys/epoll.h>
+#include <unistd.h>
+#include <utility>
 
-Channel::Channel(EventLoop *el, int fd) :
-    _el(el),
-    _fd(fd),
-    _events(0),
-    _revents(0),
-    _inEpoll(false) {}
+#include "EventLoop.h"
+#include "Exception.h"
+
+void Channel::updateEvent(event_t event, bool enable) {
+  if (enable) {
+    listen_event_ |= event;
+  } else {
+    listen_event_ &= ~event;
+  }
+  flushable_ = true;
+}
+
+void Channel::flushEvent() {
+  if (flushable_) {
+    loop_->UpdateChannel(this);
+    flushable_ = false;
+  }
+}
+
+Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET)
+    : fd_(fd), loop_(loop), listen_event_(0), ready_event_(0) {
+  // set listen_event_
+  if (enableReading) {
+    updateEvent(EPOLLIN | EPOLLPRI, true);
+  }
+  if (enableWriting) {
+    updateEvent(EPOLLOUT, true);
+  }
+  if (useET) {
+    updateEvent(EPOLLET, true);
+  }
+  flushEvent();
+}
 
 Channel::~Channel() {
-    if (_fd != -1) {
-        close(_fd);
-        _fd = -1;
+  if (fd_ != -1) {
+    ::close(fd_);
+    fd_ = -1;
+  }
+}
+
+void Channel::HandleEvent() const {
+  if (ready_event_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
+    if (read_callback_) {
+      read_callback_();
+    } else {
+      WarnIf(true, "register EPOLLIN but no read_callback_ is registered");
     }
-}
-
-// TODO if the setting of _events not going to change for the rest of the life of Channel, why not put it in ctor
-void Channel::enableReading() {
-    _events |= EPOLLIN | EPOLLPRI;
-    _el->updateChannel(this);
-}
-
-// TODO if the setting of _events not going to change for the rest of the life of Channel, why not put it in ctor
-void Channel::enableEPOLLET() {
-    _events |= EPOLLET;
-    _el->updateChannel(this);
-}
-
-int Channel::getFd() const { return _fd; }
-
-bool Channel::isInEpoll() const { return _inEpoll; }
-
-void Channel::setInEpoll(bool inEpoll) { _inEpoll = inEpoll; }
-
-uint32_t Channel::getEvents() const { return _events; }
-
-uint32_t Channel::getRevents() const { return _revents; }
-
-void Channel::setRevents(uint32_t revents) { _revents = revents; }
-
-void Channel::handleEvent() {
-    if (_revents & (EPOLLIN | EPOLLPRI)) { // EPOLLPRI means higher priority data arriving
-        _readCallback();
+  }
+  if (ready_event_ & EPOLLOUT) {
+    if (write_callback_) {
+      write_callback_();
+    } else {
+      WarnIf(true, "register EPOLLOUT but no write_callback_ is registered");
     }
-    if (_revents & (EPOLLOUT)) {
-        _writeCallback();
-    }
+  }
 }
 
-void Channel::setReadCallback(std::function<void()> callback) { _readCallback = callback; }
+void Channel::EnableReading() {
+  updateEvent(EPOLLIN | EPOLLPRI, true);
+  flushEvent();
+}
 
-void Channel::setWriteCallback(std::function<void()> callback) { _writeCallback = callback; }
+void Channel::DisableReading() {
+  updateEvent(EPOLLIN | EPOLLPRI, false);
+  flushEvent();
+}
+
+void Channel::EnableWriting() {
+  updateEvent(EPOLLOUT, true);
+  flushEvent();
+}
+
+void Channel::DisableWriting() {
+  updateEvent(EPOLLOUT, false);
+  flushEvent();
+}
+
+int Channel::GetFD() const { return fd_; }
+
+event_t Channel::GetListenEvent() const { return listen_event_; }
+
+event_t Channel::GetReadyEvent() const { return ready_event_; }
+
+bool Channel::IsInEpoll() const { return in_epoll_; }
+
+void Channel::SetInEpoll(bool in) { in_epoll_ = in; }
+
+void Channel::SetReadyEvents(event_t ev) { ready_event_ = ev; }
+
+void Channel::SetWriteCallback(std::function<void()> const &callback) { read_callback_ = std::move(callback); }
+
+void Channel::SetReadCallback(std::function<void()> const &callback) { write_callback_ = std::move(callback); }

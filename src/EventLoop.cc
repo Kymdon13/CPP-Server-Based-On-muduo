@@ -1,50 +1,22 @@
-#include "Channel.h"
-#include "Epoll.h"
-#include "EventLoop.h"
-#include "ThreadPool.h"
+#include "include/EventLoop.h"
 
-EventLoop::EventLoop() :
-    _ep(nullptr),
-    _quit(false),
-    _threadPool(nullptr)
-{
-    _ep = new Epoll();
-    _threadPool = new ThreadPool();
-}
+#include <vector>
 
-EventLoop::~EventLoop() {
-    if (_ep != nullptr) {
-        delete _ep;
-        _ep = nullptr;
+#include "include/Channel.h"
+#include "include/Poller.h"
+
+EventLoop::EventLoop() { poller_ = std::make_unique<Poller>(); }
+
+EventLoop::~EventLoop() {}
+
+void EventLoop::Loop() const {
+  while (true) {
+    for (Channel *ready_channel : poller_->Poll()) {
+      ready_channel->HandleEvent();
     }
-    if (_threadPool != nullptr) {
-        delete _threadPool;
-        _threadPool = nullptr;
-    }
+  }
 }
 
-void EventLoop::loop() {
-    while (!_quit) {
-        std::vector<Channel*> chs;
-        chs = _ep->poll();
-        for (auto &ch : chs) {
-            ch->handleEvent();
-        }
-    }
-}
+void EventLoop::UpdateChannel(Channel *channel) const { poller_->UpdateChannel(channel); }
 
-void EventLoop::loopOnce() {
-    std::vector<Channel*> chs;
-    chs = _ep->poll();
-    for (auto &ch : chs) {
-        ch->handleEvent();
-    }
-}
-
-void EventLoop::updateChannel(Channel *channel) {
-    _ep->updateChannel(channel);
-}
-
-void EventLoop::addThread(std::function<void()> func) {
-    _threadPool->add(func);
-}
+void EventLoop::DeleteChannel(Channel *channel) const { poller_->DeleteChannel(channel); }

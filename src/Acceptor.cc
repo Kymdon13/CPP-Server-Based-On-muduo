@@ -1,59 +1,74 @@
 #include "Acceptor.h"
-#include "Socket.h"
-#include "InetAddr.h"
-#include "Channel.h"
-#include "Server.h"
 
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <cstring>
 #include <iostream>
 
-Acceptor::Acceptor(EventLoop *el) :
-    _el(el),
-    _sock(nullptr),
-    _ch_acceptor(nullptr)
-{
-    // create a socket, we want a blocking socket now cause accept a connection ain't gonna take too long
-    _sock = new Socket();
-    // create an address
-    InetAddr *_addr = new InetAddr("127.0.0.1", 8888);
-    // bind the socket to the address
-    _sock->bind(_addr);
-    // listen for incoming connections
-    _sock->listen();
+#include "Channel.h"
+#include "EventLoop.h"
+#include "Exception.h"
 
-    _ch_acceptor = new Channel(_el, _sock->getFd());
-    // set the callback function for the channel
-    std::function<void()> cb = std::bind(&Acceptor::acceptConn, this); // in the calling process of acceptConn we can directly access _sock
-    _ch_acceptor->setReadCallback(cb);
-    // enable reading on the channel, and not enable EPOLLET cause we want epoll_wait to return the connection events all the time if they are not handled
-    _ch_acceptor->enableReading();
-    // no need to use ThreadPool for such a simple task
-    // _ch_acceptor->setUseThreadPool(false);
-
-    delete _addr;
+Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), listen_fd_(-1) {
+  Create();
+  Bind(ip, port);
+  Listen();
+  channel_ = std::make_unique<Channel>(listen_fd_, loop, true, false, false);  // use Level Trigger
+  std::function<void()> cb = std::bind(&Acceptor::AcceptConnectionCallback, this);
+  channel_->SetReadCallback(cb);
 }
 
 Acceptor::~Acceptor() {
-    delete _sock;
-    delete _ch_acceptor;
+  loop_->DeleteChannel(channel_.get());
+  ::close(listen_fd_);
+};
+
+void Acceptor::Create() {
+  if (-1 != listen_fd_) {
+    WarnIf(true, "Acceptor already created");
+    return;
+  }
+  listen_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);  // listening socket should be blocking I/O
+  WarnIf(-1 == listen_fd_, "Acceptor::Create failed");
 }
 
-void Acceptor::acceptConn() {
-    InetAddr *addr_clnt = new InetAddr();
-
-    Socket *sock_clnt = new Socket(_sock->accept(addr_clnt));
-    sock_clnt->setNonBlocking();
-
-    std::cout << "new client fd: " << sock_clnt->getFd() <<
-        " IP: " << inet_ntoa(addr_clnt->_addr.sin_addr) <<
-        " Port: " << ntohs(addr_clnt->_addr.sin_port) << std::endl;
-
-    // call the callback
-    _newConnCallback(sock_clnt);
-
-    // release the temp addr_clnt
-    delete addr_clnt;
+void Acceptor::Bind(const char *ip, int port) {
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(ip);
+  addr.sin_port = htons(port);
+  WarnIf(-1 == ::bind(listen_fd_, (struct sockaddr *)&addr, sizeof(addr)), "Acceptor::Bind failed");
 }
 
-void Acceptor::setNewConnCallback(std::function<void(Socket*)> cb) {
-    _newConnCallback = cb;
+void Acceptor::Listen() {
+  if (-1 == listen_fd_) {
+    WarnIf(true, "Acceptor::listen_fd_ not valid");
+    return;
+  }
+  WarnIf(-1 == ::listen(listen_fd_, SOMAXCONN), "Acceptor::Listen failed");
+}
+
+void Acceptor::AcceptConnectionCallback() {
+  struct sockaddr_in addr_client;
+  socklen_t addr_client_len = sizeof(addr_client);
+  if (-1 == listen_fd_) {
+    WarnIf(true, "Acceptor::listen_fd_ not valid");
+    return;
+  }
+
+  int fd_client =
+      ::accept4(listen_fd_, (struct sockaddr *)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+  WarnIf(-1 == fd_client, "accept4 failed");
+
+  if (!new_connection_callback_) {
+    WarnIf(true, "Acceptor::AcceptConnectionCallback failed: new_connection_callback_ is none");
+    return;
+  } else {
+    new_connection_callback_(fd_client);
+  }
 }
