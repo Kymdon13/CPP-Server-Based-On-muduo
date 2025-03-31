@@ -1,4 +1,4 @@
-#include "Acceptor.h"
+#include "include/Acceptor.h"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -9,17 +9,34 @@
 #include <cstring>
 #include <iostream>
 
-#include "Channel.h"
-#include "EventLoop.h"
-#include "Exception.h"
+#include "include/Channel.h"
+#include "include/EventLoop.h"
+#include "include/Exception.h"
 
 Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), listen_fd_(-1) {
   Create();
   Bind(ip, port);
   Listen();
   channel_ = std::make_unique<Channel>(listen_fd_, loop, true, false, false);  // use Level Trigger
-  std::function<void()> cb = std::bind(&Acceptor::AcceptConnectionCallback, this);
-  channel_->SetReadCallback(cb);
+
+  // register accept connection callback in the acceptor's channel
+  channel_->SetReadCallback([this]() {
+    // check if the listen_fd_ is invalid
+    if (-1 == listen_fd_) {
+      WarnIf(true, "Acceptor::listen_fd_ not valid");
+      return;
+    }
+    // init the addr struct
+    struct sockaddr_in addr_client;
+    socklen_t addr_client_len = sizeof(addr_client);
+    // accept the connection
+    int fd_client =
+        ::accept4(listen_fd_, (struct sockaddr *)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    WarnIf(-1 == fd_client, "accept4 failed");
+    // call on_new_connection_callback_
+    on_new_connection_callback_(fd_client);
+  });
+  channel_->FlushEvent();
 }
 
 Acceptor::~Acceptor() {
@@ -33,7 +50,12 @@ void Acceptor::Create() {
     return;
   }
   listen_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);  // listening socket should be blocking I/O
+
   WarnIf(-1 == listen_fd_, "Acceptor::Create failed");
+
+  // set the SO_REUSEADDR
+  int optval = 1;
+  ::setsockopt(listen_fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 }
 
 void Acceptor::Bind(const char *ip, int port) {
@@ -42,7 +64,7 @@ void Acceptor::Bind(const char *ip, int port) {
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(ip);
   addr.sin_port = htons(port);
-  WarnIf(-1 == ::bind(listen_fd_, (struct sockaddr *)&addr, sizeof(addr)), "Acceptor::Bind failed");
+  ErrorIf(-1 == ::bind(listen_fd_, (struct sockaddr *)&addr, sizeof(addr)), "Acceptor::Bind failed");
 }
 
 void Acceptor::Listen() {
@@ -53,22 +75,4 @@ void Acceptor::Listen() {
   WarnIf(-1 == ::listen(listen_fd_, SOMAXCONN), "Acceptor::Listen failed");
 }
 
-void Acceptor::AcceptConnectionCallback() {
-  struct sockaddr_in addr_client;
-  socklen_t addr_client_len = sizeof(addr_client);
-  if (-1 == listen_fd_) {
-    WarnIf(true, "Acceptor::listen_fd_ not valid");
-    return;
-  }
-
-  int fd_client =
-      ::accept4(listen_fd_, (struct sockaddr *)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
-  WarnIf(-1 == fd_client, "accept4 failed");
-
-  if (!new_connection_callback_) {
-    WarnIf(true, "Acceptor::AcceptConnectionCallback failed: new_connection_callback_ is none");
-    return;
-  } else {
-    new_connection_callback_(fd_client);
-  }
-}
+void Acceptor::OnNewConnection(std::function<void(int)> const &cb) { on_new_connection_callback_ = std::move(cb); }

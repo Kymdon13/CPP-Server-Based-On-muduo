@@ -1,4 +1,4 @@
-#include "ThreadPool.h"
+#include "include/ThreadPool.h"
 
 ThreadPool::ThreadPool(size_t size) {
   for (size_t i = 0; i < size; ++i) {
@@ -27,7 +27,7 @@ ThreadPool::ThreadPool(size_t size) {
 
 ThreadPool::~ThreadPool() {
   {
-    std::unique_lock<std::mutex> lock(tasks_mutex_);  // TODO(wzy) is it necessary to lock here?
+    std::unique_lock<std::mutex> lock(tasks_mutex_);  // prevent task adding after terminated_ is true
     terminated_ = true;
   }
   // notify all  in the ThreadPool

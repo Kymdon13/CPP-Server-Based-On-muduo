@@ -2,50 +2,48 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include <functional>
 #include <iostream>
 
-#include "../src/include/Connection.h"
-#include "../src/include/EventLoop.h"
-#include "../src/include/Server.h"
-#include "../src/include/Socket.h"
-#include "../src/include/Util.h"
+#include "Exception.h"
 
 #define BUFFER_SIZE 1024
 
 int main() {
-  Socket *sock = new Socket();  // sync socket
-  InetAddr *addr = new InetAddr("127.0.0.1", 8888);
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  ErrorIf(sockfd == -1, "socket create error");
 
-  // connect to server
-  sock->connect(addr);
+  struct sockaddr_in serv_addr;
+  bzero(&serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  serv_addr.sin_port = htons(8888);
 
-  EventLoop *loop = new EventLoop();
+  ErrorIf(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
 
-  // create TCPConnection instance and bind it to epoll
-  TCPConnection *conn = new TCPConnection(loop, sock, FLAGPRINT);
+  while (true) {
+    char buf[BUFFER_SIZE];  //在这个版本，buf大小必须大于或等于服务器端buf大小，不然会出错，想想为什么？
+    bzero(&buf, sizeof(buf));
 
-  /* buffer */
-  char buffer[BUFFER_SIZE];
-  while (!sock->getIsClosed()) {
-    // clear the buffer
-    memset(buffer, 0, sizeof(buffer));
+    std::cout << "input:";
+    std::cin >> buf;
 
-    // get user input
-    std::cout << "input: ";
-    std::cin >> buffer;
-
-    // write data to server
-    ssize_t bytes_write = sock->writeSync(buffer, strlen(buffer));
-    std::cerr << bytes_write << " bytes sent to server" << std::endl;
-
-    // block on epoll_wait(), true means just handle once
-    loop->loopOnce();
+    ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
+    if (write_bytes == -1) {
+      printf("socket already disconnected, can't write any more!\n");
+      break;
+    }
+    bzero(&buf, sizeof(buf));
+    ssize_t read_bytes = read(sockfd, buf, sizeof(buf));
+    if (read_bytes > 0) {
+      printf("message from server: %s\n", buf);
+    } else if (read_bytes == 0) {
+      printf("server socket disconnected!\n");
+      break;
+    } else if (read_bytes == -1) {
+      close(sockfd);
+      ErrorIf(true, "socket read error");
+    }
   }
-
-  delete conn;
-  delete loop;
-  delete addr;
-  delete sock;
+  close(sockfd);
+  return 0;
 }

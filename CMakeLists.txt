@@ -6,6 +6,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "CXX standard is ${CMAKE_CXX_STANDARD}")
 
+####################
+# set clang compiler
+####################
+set(CMAKE_C_COMPILER /usr/bin/clang)
+set(CMAKE_CXX_COMPILER /usr/bin/clang++)
+
+message(STATUS "C/CXX compiler are ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}")
+
+####################
+# project setting
+####################
+
 project(CppServer
         VERSION 0.1
         DESCRIPTION "A simple server written in C/C++."
@@ -105,8 +117,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # set include dirs
 set(CPPSERVER_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
-set(CPPSERVER_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
-include_directories(${CPPSERVER_SRC_INCLUDE_DIR} ${CPPSERVER_TEST_INCLUDE_DIR})
+include_directories(${CPPSERVER_SRC_INCLUDE_DIR})
 
 add_subdirectory(src)
 add_subdirectory(test)
@@ -181,8 +192,6 @@ add_custom_target(cpplint
 ############################################################
 
 # ### main executable
-
-include_directories(src/include)
 
 # file(GLOB SOURCES_SERVER "src/*.cc")
 # add_executable(server ${SOURCES_SERVER} "src/main-server.cpp" )

@@ -829,7 +829,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  =
+INPUT                  = ./src ./src/include
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -861,48 +861,11 @@ FILE_PATTERNS          = *.c \
                          *.cxx \
                          *.cpp \
                          *.c++ \
-                         *.java \
-                         *.ii \
-                         *.ixx \
-                         *.ipp \
-                         *.i++ \
-                         *.inl \
-                         *.idl \
-                         *.ddl \
-                         *.odl \
                          *.h \
                          *.hh \
                          *.hxx \
                          *.hpp \
-                         *.h++ \
-                         *.cs \
-                         *.d \
-                         *.php \
-                         *.php4 \
-                         *.php5 \
-                         *.phtml \
-                         *.inc \
-                         *.m \
-                         *.markdown \
-                         *.md \
-                         *.mm \
-                         *.dox \
-                         *.doc \
-                         *.txt \
-                         *.py \
-                         *.pyw \
-                         *.f90 \
-                         *.f95 \
-                         *.f03 \
-                         *.f08 \
-                         *.f \
-                         *.for \
-                         *.tcl \
-                         *.vhd \
-                         *.vhdl \
-                         *.ucf \
-                         *.qsf \
-                         *.ice
+                         *.h++
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -2416,7 +2379,7 @@ INCLUDED_BY_GRAPH      = YES
 # The default value is: NO.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-CALL_GRAPH             = NO
+CALL_GRAPH             = YES
 
 # If the CALLER_GRAPH tag is set to YES then doxygen will generate a caller
 # dependency graph for every global function or class method.
@@ -2428,7 +2391,7 @@ CALL_GRAPH             = NO
 # The default value is: NO.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-CALLER_GRAPH           = NO
+CALLER_GRAPH           = YES
 
 # If the GRAPHICAL_HIERARCHY tag is set to YES then doxygen will graphical
 # hierarchy of all classes instead of a textual one.

@@ -42,8 +42,11 @@ void Poller::UpdateChannel(Channel *channel) const {
   ev.data.ptr = channel;
   ev.events = channel->GetListenEvent();
   if (!channel->IsInEpoll()) {
-    WarnIf(-1 == epoll_ctl(epfd_, EPOLL_CTL_ADD, sockfd, &ev), "Poller::UpdateChannel: epoll_ctl(EPOLL_CTL_ADD) error");
-    channel->SetInEpoll();
+    if (-1 == epoll_ctl(epfd_, EPOLL_CTL_ADD, sockfd, &ev)) {
+      WarnIf(true, "Poller::UpdateChannel: epoll_ctl(EPOLL_CTL_ADD) error, will not call Channel::SetInEpoll()");
+      return;
+    }
+    channel->SetInEpoll(true);
   } else {
     WarnIf(-1 == epoll_ctl(epfd_, EPOLL_CTL_MOD, sockfd, &ev), "Poller::UpdateChannel: epoll_ctl(EPOLL_CTL_MOD) error");
   }
@@ -51,6 +54,10 @@ void Poller::UpdateChannel(Channel *channel) const {
 
 void Poller::DeleteChannel(Channel *channel) const {
   int sockfd = channel->GetFD();
-  WarnIf(-1 == epoll_ctl(epfd_, EPOLL_CTL_DEL, sockfd, nullptr), "Poller::UpdateChannel: epoll(EPOLL_CTL_DEL) error");
+  if (-1 == epoll_ctl(epfd_, EPOLL_CTL_DEL, sockfd, nullptr)) {
+    WarnIf(true,
+           "Poller::UpdateChannel: epoll(EPOLL_CTL_DEL) error, which means Channel may still in the system epoll");
+    return;
+  }
   channel->SetInEpoll(false);
 }

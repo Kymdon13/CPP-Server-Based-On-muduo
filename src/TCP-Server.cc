@@ -1,33 +1,89 @@
-#include "TCP-Server.h"
+#include "include/TCP-Server.h"
 
 #include <unistd.h>
 
 #include <iostream>
+#include <sstream>
 
-#include "Acceptor.h"
-#include "EventLoop.h"
-#include "Exception.h"
-#include "TCP-Connection.h"
-#include "ThreadPool.h"
+#include "include/Acceptor.h"
+#include "include/CurrentThread.h"
+#include "include/EventLoop.h"
+#include "include/Exception.h"
+#include "include/TCP-Connection.h"
+#include "include/ThreadPool.h"
 
 #define MAX_CONN_ID 1000
 
 TCPServer::TCPServer(const char *ip, const int port) {
   main_reactor_ = std::make_unique<EventLoop>();
+
+  /**
+   * init main reactor as Acceptor
+   */
   acceptor_ = std::make_unique<Acceptor>(main_reactor_.get(), ip, port);
 
-  acceptor_->SetNewConnectionCallback([this](int fd) { HandleNewConnection(fd); });
+  /**
+   * set Acceptor::on_new_connection_callback_
+   * The call hierarchy is:
+   * Channel::read_callback_()->Acceptor::on_new_connection_callback_()
+   */
+  acceptor_->OnNewConnection([this](int fd) {
+    if (fd == -1) {
+      WarnIf(true, "Acceptor::on_new_connection_callback_(): fd == -1");
+      return;
+    }
+    // create TCPConnection (!!!note that TCPConnection must be held by a shared_ptr to enable the shared_from_this()
+    // method), and dispatch it to a random subReactor
+    size_t which_sub_reactor = fd % sub_reactors_.size();
+    std::shared_ptr<TCPConnection> conn =
+        std::make_shared<TCPConnection>(sub_reactors_[which_sub_reactor].get(), fd, next_connection_id_);
 
-  unsigned int hardware_concurrency = std::thread::hardware_concurrency();
+    /**
+     * set TCPConnecion::on_close_callback_
+     */
+    conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
+      main_reactor_->CallOrQueue([this, conn]() {
+        std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
+        // close the TCPConnection
+        int fd = conn->GetFD();
+        auto it = connection_map_.find(fd);
+        if (it == connection_map_.end()) {
+          std::stringstream ss;
+          ss << "Connection::on_close_callback_(): can not find fd: " << fd << " in connection_map_";
+          WarnIf(true, ss.str().c_str());
+          return;
+        }
+        connection_map_.erase(fd);
+        // remove the channel from the system epoll
+        conn->GetEventLoop()->DeleteChannel(conn->GetChannel());
+      });
+    });
+    // set TCPConnecion::on_connection_callback_. called in
+    conn->OnConnection(on_connection_callback_);
+    // set TCPConnecion::on_message_callback_
+    conn->OnMessage(on_message_callback_);
+    // update the connection_map_
+    connection_map_[fd] = conn;
+    // update next_connection_id_
+    next_connection_id_ = (++next_connection_id_) % MAX_CONN_ID;
+    // enable the connection
+    conn->EnableConnection();
+  });
+
+  /**
+   * create ThreadPool
+   */
+  unsigned int hardware_concurrency =
+      std::thread::hardware_concurrency() - 1;  // minus 1 cuz the main_reactor_ has taken one thread
   thread_pool_ = std::make_unique<ThreadPool>(hardware_concurrency);
-
-  // create n (n = hardware_concurrency) EventLoop, put them into sub_reactors_
+  // create n EventLoop (n = hardware_concurrency), put the pointers into sub_reactors_
   for (size_t i = 0; i < hardware_concurrency; ++i) {
     sub_reactors_.emplace_back(std::make_unique<EventLoop>());
   }
 }
 
 void TCPServer::Start() {
+  // dispatch the subReactor to the threads
   for (size_t i = 0; i < sub_reactors_.size(); ++i) {
     EventLoop *el = sub_reactors_[i].get();
     thread_pool_->Add([el]() { el->Loop(); });
@@ -35,35 +91,9 @@ void TCPServer::Start() {
   main_reactor_->Loop();
 }
 
-void TCPServer::OnConnect(std::function<void(TCPConnection *)> const &func) { on_connect_callback_ = std::move(func); }
-
-void TCPServer::OnMessage(std::function<void(TCPConnection *)> const &func) { on_message_callback_ = std::move(func); }
-
-void TCPServer::HandleClose(int fd) {
-  auto it = connection_map_.find(fd);
-  if (it == connection_map_.end()) {
-    WarnIf(true, "HandleClose can not find fd in connection_map_");
-    return;
-  }
-  TCPConnection *conn = connection_map_[fd];
-  connection_map_.erase(fd);
-  delete conn;
+void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> const &func) {
+  on_connection_callback_ = std::move(func);
 }
-
-void TCPServer::HandleNewConnection(int fd) {
-  if (fd == -1) {
-    WarnIf(true, "HandleNewConnection: fd == -1");
-    return;
-  }
-  std::cout << "New TCP fd: " << fd << std::endl;
-
-  size_t which_sub_reactor = fd % sub_reactors_.size();
-
-  TCPConnection *conn = new TCPConnection(sub_reactors_[which_sub_reactor].get(), fd, next_connection_id_);
-
-  conn->SetOnCloseCallback([this](int fd) { HandleClose(fd); });
-
-  conn->SetOnMessageCallback(on_message_callback_);
-
-  next_connection_id_ = (next_connection_id_ + 1) % MAX_CONN_ID;
+void TCPServer::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> const &func) {
+  on_message_callback_ = std::move(func);
 }

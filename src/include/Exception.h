@@ -1,11 +1,10 @@
-#ifndef EXCEPTION_H_
-#define EXCEPTION_H_
+#pragma once
 
 #include <iostream>
 #include <stdexcept>
 #include <string>
 
-void ErrorIf(bool condition, const char *errmsg) {
+inline void ErrorIf(bool condition, const char *errmsg) {
   if (condition) {
     std::string prefix = "ErrorIf: ";
     std::string msg = prefix + errmsg;
@@ -14,7 +13,7 @@ void ErrorIf(bool condition, const char *errmsg) {
   }
 }
 
-void WarnIf(bool condition, const char *wrnmsg) {
+inline void WarnIf(bool condition, const char *wrnmsg) {
   if (condition) {
     std::string prefix = "WarnIf: ";
     std::string msg = prefix + wrnmsg;
@@ -53,5 +52,3 @@ class Exception : public std::runtime_error {
  private:
   ExceptionType type_;
 };
-
-#endif  // EXCEPTION_H_

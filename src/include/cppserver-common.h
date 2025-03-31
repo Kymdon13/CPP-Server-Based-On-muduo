@@ -1,14 +1,12 @@
 #pragma once
 
 // For headers no need to include every other headers
-class TcpServer;
+class TCPServer;
 class EventLoop;
 class Poller;
-class PollPoller;
 class Acceptor;
 class TCPConnection;
 class Channel;
-class Socket;
 class Buffer;
 class ThreadPool;
 

@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <utility>
 
-#include "EventLoop.h"
-#include "Exception.h"
+#include "include/EventLoop.h"
+#include "include/Exception.h"
 
 void Channel::updateEvent(event_t event, bool enable) {
   if (enable) {
@@ -14,13 +14,6 @@ void Channel::updateEvent(event_t event, bool enable) {
     listen_event_ &= ~event;
   }
   flushable_ = true;
-}
-
-void Channel::flushEvent() {
-  if (flushable_) {
-    loop_->UpdateChannel(this);
-    flushable_ = false;
-  }
 }
 
 Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET)
@@ -35,7 +28,6 @@ Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting
   if (useET) {
     updateEvent(EPOLLET, true);
   }
-  flushEvent();
 }
 
 Channel::~Channel() {
@@ -45,7 +37,22 @@ Channel::~Channel() {
   }
 }
 
+void Channel::FlushEvent() {
+  if (flushable_) {
+    loop_->UpdateChannel(this);
+    flushable_ = false;
+  }
+}
+
 void Channel::HandleEvent() const {
+  // use_count_lock only exists during the HandleEvent method
+  std::shared_ptr<TCPConnection> use_count_lock = tcp_connection_ptr_.lock();
+  // TODO there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
+  // Channel, we must find a way to detect whether the caller is an Acceptor if (!use_count_lock) {  // if failed to
+  // promote the weak_ptr to shared_ptr
+  //   WarnIf(true, "Channel::HandleEvent() failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue");
+  //   return;
+  // } else if ()
   if (ready_event_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
     if (read_callback_) {
       read_callback_();
@@ -64,36 +71,25 @@ void Channel::HandleEvent() const {
 
 void Channel::EnableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, true);
-  flushEvent();
-}
-
-void Channel::DisableReading() {
-  updateEvent(EPOLLIN | EPOLLPRI, false);
-  flushEvent();
+  FlushEvent();
 }
 
 void Channel::EnableWriting() {
   updateEvent(EPOLLOUT, true);
-  flushEvent();
-}
-
-void Channel::DisableWriting() {
-  updateEvent(EPOLLOUT, false);
-  flushEvent();
+  FlushEvent();
 }
 
 int Channel::GetFD() const { return fd_; }
 
 event_t Channel::GetListenEvent() const { return listen_event_; }
-
 event_t Channel::GetReadyEvent() const { return ready_event_; }
 
 bool Channel::IsInEpoll() const { return in_epoll_; }
-
 void Channel::SetInEpoll(bool in) { in_epoll_ = in; }
 
 void Channel::SetReadyEvents(event_t ev) { ready_event_ = ev; }
 
-void Channel::SetWriteCallback(std::function<void()> const &callback) { read_callback_ = std::move(callback); }
+void Channel::SetReadCallback(std::function<void()> const &callback) { read_callback_ = std::move(callback); }
+void Channel::SetWriteCallback(std::function<void()> const &callback) { write_callback_ = std::move(callback); }
 
-void Channel::SetReadCallback(std::function<void()> const &callback) { write_callback_ = std::move(callback); }
+void Channel::SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn) { tcp_connection_ptr_ = conn; }

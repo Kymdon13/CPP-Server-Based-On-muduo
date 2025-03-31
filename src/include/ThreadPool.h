@@ -45,8 +45,6 @@ auto ThreadPool::Add(F &&f, Args &&... args) -> std::future<typename std::result
       // arguments are passed to f with their original value category (lvalue or
       // rvalue).
       std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-  // The task now holds the bound function and is ready to be executed. When
-  // executed, it will store the result (or any exception thrown) internally.
 
   // get_future() is a method of packaged_task that retrieves the std::future
   // object associated with the packaged_task.

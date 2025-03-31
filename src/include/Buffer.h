@@ -14,10 +14,11 @@ class Buffer {
   Buffer() = default;
   ~Buffer() = default;
 
-  const char *GetBuffer() const;
-
   size_t Size() const;
-  void Append(const char *str, size_t size);
+
+  const char *GetBuffer() const;
   void SetBuffer(const char *str);
+
+  void Append(const char *str, size_t size);
   void Clear();
 };

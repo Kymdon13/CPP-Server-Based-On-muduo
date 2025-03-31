@@ -14,7 +14,7 @@ enum class ConnectionState : uint8_t {
   Failed
 };
 
-class TCPConnection {
+class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
  private:
   EventLoop *loop_;
 
@@ -27,9 +27,13 @@ class TCPConnection {
   std::unique_ptr<Buffer> read_buffer_;
   std::unique_ptr<Buffer> write_buffer_;
 
-  std::function<void(int)> on_close_;
-  std::function<void(TCPConnection *)> on_message_;
+  /// @brief on_close_callback_ will
+  std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
+  std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
+  std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
 
+  // FIXME message boundary too simple
+  /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
   void readNonBlocking();
   /// @brief clear the read_buffer_ and read the msg to read_buffer_
   void read();
@@ -40,26 +44,36 @@ class TCPConnection {
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPConnection);
-
   TCPConnection(EventLoop *loop, int connection_fd, int connection_id);
   ~TCPConnection();
 
-  void SetOnCloseCallback(std::function<void(int)> const &func);
-  void SetOnMessageCallback(std::function<void(TCPConnection *)> const &func);
+  /// @brief register related Channel to the system epoll, init Channel::tcp_connection_ptr_
+  void EnableConnection();
 
+  void OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
+
+  /**
+   * these two methods are bound together in real application
+   */
+  /// @brief only set the write_buffer_, you have to call private method 'write()' to send it
   void SetWriteBuffer(const char *msg);
 
-  /// @brief main interface for user
+  /// @brief get what is inside the read_buffer_
+  const char *GetReadBuffer();
+
+  /// @brief main sending interface for user
   void Send(const std::string &msg);
   void Send(const char *msg);
 
-  void HandleMessage();
+  /// @brief call on_close_callback_
   void HandleClose();
 
   int GetFD() const;
   int GetID() const;
   ConnectionState GetConnectionState() const;
   EventLoop *GetEventLoop() const;
-  const char *GetReadBuffer();
+  Channel *GetChannel();
   const char *GetWriteBuffer();
 };

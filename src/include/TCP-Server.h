@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Acceptor.h"
+#include "ThreadPool.h"
 #include "cppserver-common.h"
 
 class TCPServer {
@@ -13,12 +15,14 @@ class TCPServer {
   std::vector<std::unique_ptr<EventLoop>> sub_reactors_;
 
   std::unique_ptr<Acceptor> acceptor_;
-  std::unordered_map<int, TCPConnection *> connection_map_;
+  std::unordered_map<int, std::shared_ptr<TCPConnection>> connection_map_;
 
   std::unique_ptr<ThreadPool> thread_pool_;
 
-  std::function<void(TCPConnection *)> on_connect_callback_;
-  std::function<void(TCPConnection *)> on_message_callback_;
+  /// @brief for developer to customize
+  std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
+  /// @brief for developer to customize
+  std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
 
   size_t next_connection_id_{0};
 
@@ -29,9 +33,9 @@ class TCPServer {
 
   void Start();
 
-  void OnConnect(std::function<void(TCPConnection *)> const &func);
-  void OnMessage(std::function<void(TCPConnection *)> const &func);
-
-  void HandleClose(int fd);
-  void HandleNewConnection(int fd);
+  /// @brief for developer to customize (for example, you want to print something when connected), the
+  /// Acceptor->on_new_connection_callback_ is registered by the ctor
+  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> const &func);
+  /// @brief for developer to customize
+  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> const &func);
 };

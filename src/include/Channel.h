@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include "cppserver-common.h"
 
@@ -15,10 +16,11 @@ class Channel {
   std::function<void()> write_callback_;
 
   bool flushable_{false};
+
+  std::weak_ptr<TCPConnection> tcp_connection_ptr_;
+
   /// @brief modify listen_event_
   void updateEvent(event_t event, bool enable);
-  /// @brief call epoll_ctl
-  void flushEvent();
 
  public:
   DISABLE_COPYING_AND_MOVING(Channel);
@@ -26,15 +28,16 @@ class Channel {
   Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET);
   ~Channel();
 
+  /// @brief call epoll_ctl
+  void FlushEvent();
+
   void HandleEvent() const;
 
   void EnableReading();
-  void DisableReading();
 
   void EnableWriting();
-  void DisableWriting();
 
-  // TODO(wzy) there is no useET(), I integrate it into the ctor
+  // XXX(wzy) there is no useET(), it is integrated into the ctor
 
   int GetFD() const;
 
@@ -48,4 +51,6 @@ class Channel {
 
   void SetReadCallback(std::function<void()> const &callback);
   void SetWriteCallback(std::function<void()> const &callback);
+
+  void SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn);
 };
