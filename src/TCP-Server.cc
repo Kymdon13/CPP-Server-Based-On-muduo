@@ -34,9 +34,8 @@ TCPServer::TCPServer(const char *ip, const int port) {
     }
     // create TCPConnection (!!!note that TCPConnection must be held by a shared_ptr to enable the shared_from_this()
     // method), and dispatch it to a random subReactor
-    size_t which_sub_reactor = fd % sub_reactors_.size();
     std::shared_ptr<TCPConnection> conn =
-        std::make_shared<TCPConnection>(sub_reactors_[which_sub_reactor].get(), fd, next_connection_id_);
+        std::make_shared<TCPConnection>(thread_pool_->GetSubReactor(), fd, next_connection_id_);
 
     /**
      * set TCPConnecion::on_close_callback_
@@ -76,18 +75,12 @@ TCPServer::TCPServer(const char *ip, const int port) {
   unsigned int hardware_concurrency =
       std::thread::hardware_concurrency() - 1;  // minus 1 cuz the main_reactor_ has taken one thread
   thread_pool_ = std::make_unique<ThreadPool>(hardware_concurrency);
-  // create n EventLoop (n = hardware_concurrency), put the pointers into sub_reactors_
-  for (size_t i = 0; i < hardware_concurrency; ++i) {
-    sub_reactors_.emplace_back(std::make_unique<EventLoop>());
-  }
 }
 
 void TCPServer::Start() {
-  // dispatch the subReactor to the threads
-  for (size_t i = 0; i < sub_reactors_.size(); ++i) {
-    EventLoop *el = sub_reactors_[i].get();
-    thread_pool_->Add([el]() { el->Loop(); });
-  }
+  // dispatch the sub reactors to the threads
+  thread_pool_->Init();
+
   main_reactor_->Loop();
 }
 

@@ -14,6 +14,8 @@
 #include "../src/include/Poller.h"
 #include "../src/include/TCP-Connection.h"
 #include "../src/include/TCP-Server.h"
+#include "../src/include/Thread.h"
+#include "../src/include/ThreadPool.h"
 
 int main() {
   TCPServer *server = new TCPServer("127.0.0.1", 8888);

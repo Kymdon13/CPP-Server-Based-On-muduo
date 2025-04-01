@@ -12,7 +12,6 @@
 class TCPServer {
  private:
   std::unique_ptr<EventLoop> main_reactor_;
-  std::vector<std::unique_ptr<EventLoop>> sub_reactors_;
 
   std::unique_ptr<Acceptor> acceptor_;
   std::unordered_map<int, std::shared_ptr<TCPConnection>> connection_map_;

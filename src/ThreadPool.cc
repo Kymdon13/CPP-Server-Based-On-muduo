@@ -1,38 +1,23 @@
 #include "include/ThreadPool.h"
+#include "include/Thread.h"
 
-ThreadPool::ThreadPool(size_t size) {
-  for (size_t i = 0; i < size; ++i) {
-    workers_.emplace_back(std::thread([this]() {  // pass 'this' to access data member
-      while (true) {                              // waiting task's loop
-        std::function<void()> task;
-        {
-          std::unique_lock<std::mutex> lock(tasks_mutex_);
-          condition_variable_.wait(lock,
-                                   [this]() {  // wait for another thread to fetch a task
-                                     return terminated_ || !tasks_.empty();
-                                   });
-          // if we are calling dtor and there is no task, exit this thread
-          // permanently
-          if (terminated_ && tasks_.empty()) return;
-          // otherwise fetch a task
-          task = tasks_.front();
-          tasks_.pop();
-        }
-        task();  // exec the task, after the task is done, go back to endless
-                 // loop again
-      }
-    }));
+ThreadPool::ThreadPool(int n_threads) : n_threads_(n_threads) {}
+
+ThreadPool::~ThreadPool() {}
+
+void ThreadPool::Init() {
+  for (size_t i = 0; i < n_threads_; ++i) {
+    threads_.emplace_back(std::make_unique<Thread>());
+    loops_.push_back(threads_.back()->StartLoop());
   }
 }
 
-ThreadPool::~ThreadPool() {
-  {
-    std::unique_lock<std::mutex> lock(tasks_mutex_);  // prevent task adding after terminated_ is true
-    terminated_ = true;
+EventLoop *ThreadPool::GetSubReactor() {
+  if (!loops_.empty()) {
+    ++which_sub_reactor_;
+    which_sub_reactor_ %= loops_.size();
+    return loops_[which_sub_reactor_].get();
   }
-  // notify all  in the ThreadPool
-  condition_variable_.notify_all();
-  // before we release resources, wait for each thread to complete its task
-  for (auto &thread : workers_)
-    if (thread.joinable()) thread.join();
+  // if there is not any sub reactors in the loops_, then main reactor will do the work
+  return main_reactor_.get();
 }
