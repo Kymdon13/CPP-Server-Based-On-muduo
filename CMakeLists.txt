@@ -116,9 +116,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # set include dirs
-set(CPPSERVER_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
-include_directories(${CPPSERVER_SRC_INCLUDE_DIR})
+file(GLOB SUB_DIRS "${PROJECT_SOURCE_DIR}/src/*")
+foreach(DIR ${SUB_DIRS})
+    if(IS_DIRECTORY ${DIR})
+        include_directories(${DIR})
+    endif()
+endforeach()
 
+# sub CMakeLists.txt
 add_subdirectory(src)
 add_subdirectory(test)
 
@@ -171,8 +176,8 @@ add_custom_target(clang-tidy
 # `make cpplint`
 ####################
 file(GLOB_RECURSE CPPSERVER_LINT_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc"
     )

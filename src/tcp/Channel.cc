@@ -1,11 +1,13 @@
-#include "include/Channel.h"
+#include "Channel.h"
 
 #include <sys/epoll.h>
 #include <unistd.h>
+
+#include <memory>
 #include <utility>
 
-#include "include/EventLoop.h"
-#include "include/Exception.h"
+#include "EventLoop.h"
+#include "Exception.h"
 
 void Channel::updateEvent(event_t event, bool enable) {
   if (enable) {
@@ -47,7 +49,7 @@ void Channel::FlushEvent() {
 void Channel::HandleEvent() const {
   // use_count_lock only exists during the HandleEvent method
   std::shared_ptr<TCPConnection> use_count_lock = tcp_connection_ptr_.lock();
-  // TODO there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
+  // TODO(wzy) there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
   // Channel, we must find a way to detect whether the caller is an Acceptor if (!use_count_lock) {  // if failed to
   // promote the weak_ptr to shared_ptr
   //   WarnIf(true, "Channel::HandleEvent() failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue");

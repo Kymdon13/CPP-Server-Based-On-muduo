@@ -1,11 +1,11 @@
-#include "include/Thread.h"
+#include "Thread.h"
 
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <thread>
 
-#include "include/EventLoop.h"
+#include "EventLoop.h"
 
 Thread::Thread() {}
 

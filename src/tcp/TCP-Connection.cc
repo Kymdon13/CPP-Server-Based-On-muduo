@@ -1,14 +1,17 @@
-#include "include/TCP-Connection.h"
+#include "TCP-Connection.h"
 
 #include <string.h>
 #include <unistd.h>
 
 #include <iostream>
+#include <memory>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
-#include "include/Buffer.h"
-#include "include/Channel.h"
-#include "include/Exception.h"
+#include "Buffer.h"
+#include "Channel.h"
+#include "Exception.h"
 
 #define BUFFER_SIZE 1024  // determine how many chars can be read into read_buffer_ at once
 

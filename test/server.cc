@@ -8,14 +8,14 @@
 #include <iostream>
 #include <vector>
 
-#include "../src/include/CurrentThread.h"
-#include "../src/include/EventLoop.h"
-#include "../src/include/Exception.h"
-#include "../src/include/Poller.h"
-#include "../src/include/TCP-Connection.h"
-#include "../src/include/TCP-Server.h"
-#include "../src/include/Thread.h"
-#include "../src/include/ThreadPool.h"
+#include "CurrentThread.h"
+#include "EventLoop.h"
+#include "Exception.h"
+#include "Poller.h"
+#include "TCP-Connection.h"
+#include "TCP-Server.h"
+#include "Thread.h"
+#include "ThreadPool.h"
 
 int main() {
   TCPServer *server = new TCPServer("127.0.0.1", 8888);

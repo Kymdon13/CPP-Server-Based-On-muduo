@@ -2,6 +2,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <cstdio>
 #include <iostream>
 
 #include "Exception.h"
@@ -21,7 +23,7 @@ int main() {
   ErrorIf(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
 
   while (true) {
-    char buf[BUFFER_SIZE];  //在这个版本，buf大小必须大于或等于服务器端buf大小，不然会出错，想想为什么？
+    char buf[BUFFER_SIZE];  // 在这个版本，buf大小必须大于或等于服务器端buf大小，不然会出错，想想为什么？
     bzero(&buf, sizeof(buf));
 
     std::cout << "input:";

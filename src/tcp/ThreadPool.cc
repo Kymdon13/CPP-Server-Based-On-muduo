@@ -1,5 +1,5 @@
-#include "include/ThreadPool.h"
-#include "include/Thread.h"
+#include "ThreadPool.h"
+#include "Thread.h"
 
 ThreadPool::ThreadPool(int n_threads) : n_threads_(n_threads) {}
 
