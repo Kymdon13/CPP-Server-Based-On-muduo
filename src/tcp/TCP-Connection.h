@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "cppserver-common.h"
+#include "base/cppserver-common.h"
 
 enum class ConnectionState : uint8_t {
   Invalid = 1,
@@ -32,7 +32,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
 
-  // FIXME message boundary too simple
+  // FIXME(wzy) message boundary too simple
   /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
   void readNonBlocking();
   /// @brief clear the read_buffer_ and read the msg to read_buffer_
@@ -50,9 +50,9 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   /// @brief register related Channel to the system epoll, init Channel::tcp_connection_ptr_
   void EnableConnection();
 
-  void OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void OnClose(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
+  void OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
+  void OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
 
   /**
    * these two methods are bound together in real application
@@ -61,7 +61,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   void SetWriteBuffer(const char *msg);
 
   /// @brief get what is inside the read_buffer_
-  const char *GetReadBuffer();
+  Buffer *GetReadBuffer();
 
   /// @brief main sending interface for user
   void Send(const std::string &msg);
@@ -75,5 +75,5 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   ConnectionState GetConnectionState() const;
   EventLoop *GetEventLoop() const;
   Channel *GetChannel();
-  const char *GetWriteBuffer();
+  Buffer *GetWriteBuffer();
 };

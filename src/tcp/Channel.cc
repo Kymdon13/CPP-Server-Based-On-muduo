@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "EventLoop.h"
-#include "Exception.h"
+#include "base/Exception.h"
 
 void Channel::updateEvent(event_t event, bool enable) {
   if (enable) {
@@ -91,7 +91,7 @@ void Channel::SetInEpoll(bool in) { in_epoll_ = in; }
 
 void Channel::SetReadyEvents(event_t ev) { ready_event_ = ev; }
 
-void Channel::SetReadCallback(std::function<void()> const &callback) { read_callback_ = std::move(callback); }
-void Channel::SetWriteCallback(std::function<void()> const &callback) { write_callback_ = std::move(callback); }
+void Channel::SetReadCallback(const std::function<void()> &callback) { read_callback_ = std::move(callback); }
+void Channel::SetWriteCallback(const std::function<void()> &callback) { write_callback_ = std::move(callback); }
 
 void Channel::SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn) { tcp_connection_ptr_ = conn; }

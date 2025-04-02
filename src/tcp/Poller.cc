@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "Channel.h"
-#include "Exception.h"
+#include "base/Exception.h"
 
 #define MAX_EVENTS 1000
 

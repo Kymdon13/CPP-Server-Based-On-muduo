@@ -3,9 +3,33 @@
 #include <string>
 #include <unordered_map>
 
-enum class HTTPMethod { Invalid = 0, Get, Post, Head, Put, Delete };
+enum class HTTPMethod : unsigned char { Invalid = 0, GET, HEAD, POST };
 
-enum HTTPVersion { Unknown = 0, HTTP10, HTTP11 };
+inline std::string HTTPMethodToString(HTTPMethod method) {
+  switch (method) {
+    case HTTPMethod::GET:
+      return "GET";
+    case HTTPMethod::HEAD:
+      return "HEAD";
+    case HTTPMethod::POST:
+      return "POST";
+    default:
+      return "Invalid";
+  }
+}
+
+enum class HTTPVersion : unsigned char { Invalid = 0, HTTP10, HTTP11 };
+
+static std::string HTTPVersionToString(HTTPVersion ver) {
+  switch (ver) {
+    case HTTPVersion::HTTP11:
+      return "HTTP/1.1";
+    case HTTPVersion::HTTP10:
+      return "HTTP/1.0";
+    default:
+      return "Invalid";
+  }
+}
 
 class HTTPRequest {
  public:
@@ -40,7 +64,7 @@ class HTTPRequest {
  private:
   HTTPMethod method_{HTTPMethod::Invalid};
   std::string url_;
-  HTTPVersion version_{HTTPVersion::Unknown};
+  HTTPVersion version_{HTTPVersion::Invalid};
   std::string protocol_;
   std::unordered_map<std::string, std::string> headers_;
   std::unordered_map<std::string, std::string> request_params_;

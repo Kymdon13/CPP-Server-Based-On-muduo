@@ -8,7 +8,8 @@
 
 class HTTPRequest;
 
-enum class HTTPRequestParseState {
+enum class HTTPRequestParseState : unsigned char {
+  // TODO(wzy) need to implement different types of invalid state
   INVALID,
   INVALID_METHOD,
   INVALID_URL,
@@ -38,10 +39,8 @@ enum class HTTPRequestParseState {
   HEADER_VALUE,
 
   ENCOUNTER_CR,  // encounter a CR
-
-  CR_LF,  // if next char is CR then it's BODY which follows, otherwise it's header
-
-  CR_LF_CR,  // encounter CR after CR_LF
+  CR_LF,         // if next char is CR then it's BODY which follows, otherwise it's header
+  CR_LF_CR,      // encounter CR after CR_LF
 
   BODY,
 
@@ -61,5 +60,5 @@ class HTTPContext {
   void ResetState();
   bool IsComplete();
   HTTPRequest *GetHTTPRequest();
-  bool ParseRequest(const char *begin, ssize_t size);
+  HTTPRequestParseState ParseRequest(const char *begin, ssize_t size);
 };

@@ -17,11 +17,12 @@ bool HTTPContext::IsComplete() { return state_ == HTTPRequestParseState::COMPLET
 
 HTTPRequest *HTTPContext::GetHTTPRequest() { return http_request_.get(); }
 
-bool HTTPContext::ParseRequest(const char *begin, ssize_t size) {
+HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, ssize_t size) {
   char *start = const_cast<char *>(begin);  // point to left border
-  char *cur = start;  // point to right border
+  char *cur = start;                        // point to right border
+  char *end = start + size;
   char *colon = cur;  // store the position of ':' if encounter 'url:params' or 'headerkey:headervalue'
-  while (state_ != HTTPRequestParseState::INVALID && state_ != HTTPRequestParseState::COMPLETE && cur - begin < size) {
+  while (state_ != HTTPRequestParseState::INVALID && state_ != HTTPRequestParseState::COMPLETE && cur < end) {
     char c = *cur;  // get current char
     switch (state_) {
       case HTTPRequestParseState::START: {
@@ -61,7 +62,7 @@ bool HTTPContext::ParseRequest(const char *begin, ssize_t size) {
         break;
       }
       case HTTPRequestParseState::URL: {
-        if (c == '?') { // encounter request params
+        if (c == '?') {  // encounter request params
           state_ = HTTPRequestParseState::BEFORE_URL_PARAM_KEY;
           http_request_->SetUrl(std::string(start, cur));
           start = cur + 1;
@@ -176,7 +177,9 @@ bool HTTPContext::ParseRequest(const char *begin, ssize_t size) {
           break;
         } else if (c == CR) {
           state_ = HTTPRequestParseState::ENCOUNTER_CR;
-          http_request_->AddHeader(std::string(start, colon), std::string(colon + 2, cur));  // colon+2 is because there is a space between ':' and the header value
+          http_request_->AddHeader(
+              std::string(start, colon),
+              std::string(colon + 2, cur));  // colon+2 is because there is a space between ':' and the header value
           start = cur + 1;
         }
         break;
@@ -215,5 +218,27 @@ bool HTTPContext::ParseRequest(const char *begin, ssize_t size) {
     }
     ++cur;
   }
-  return state_ == HTTPRequestParseState::COMPLETE;
+  switch (state_) {
+    case HTTPRequestParseState::COMPLETE:
+      return HTTPRequestParseState::COMPLETE;
+      break;
+    case HTTPRequestParseState::INVALID:
+      return HTTPRequestParseState::INVALID;
+      break;
+    case HTTPRequestParseState::INVALID_METHOD:
+      return HTTPRequestParseState::INVALID_METHOD;
+      break;
+    case HTTPRequestParseState::INVALID_URL:
+      return HTTPRequestParseState::INVALID_URL;
+      break;
+    case HTTPRequestParseState::INVALID_VERSION:
+      return HTTPRequestParseState::INVALID_VERSION;
+      break;
+    case HTTPRequestParseState::INVALID_HEADER:
+      return HTTPRequestParseState::INVALID_HEADER;
+      break;
+    default:
+      return HTTPRequestParseState::INVALID;
+      break;
+  }
 }

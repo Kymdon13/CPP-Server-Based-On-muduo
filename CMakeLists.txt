@@ -97,7 +97,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -std=c++17 -pthread"
 # -fno-optimize-sibling-calls: disables sibling call optimization, also helpfull for debugging
 
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-# FIXME disable the AddressSanitizer temporarily
+# FIXME(wzy) disable the AddressSanitizer temporarily
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
 # generate Position Independent Code is essential for shared libs
@@ -116,12 +116,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # set include dirs
-file(GLOB SUB_DIRS "${PROJECT_SOURCE_DIR}/src/*")
-foreach(DIR ${SUB_DIRS})
-    if(IS_DIRECTORY ${DIR})
-        include_directories(${DIR})
-    endif()
-endforeach()
+include_directories(${PROJECT_SOURCE_DIR}/src)
+# file(GLOB SUB_DIRS "${PROJECT_SOURCE_DIR}/src/*")
+# foreach(DIR ${SUB_DIRS})
+#     if(IS_DIRECTORY ${DIR})
+#         include_directories(${DIR})
+#     endif()
+# endforeach()
 
 # sub CMakeLists.txt
 add_subdirectory(src)

@@ -11,9 +11,9 @@
 
 #include "Buffer.h"
 #include "Channel.h"
-#include "Exception.h"
+#include "base/Exception.h"
 
-#define BUFFER_SIZE 1024  // determine how many chars can be read into read_buffer_ at once
+#define BUFFER_SIZE 4096  // determine how many chars can be read into read_buffer_ at once
 
 void TCPConnection::readNonBlocking() {
   char buf[BUFFER_SIZE];
@@ -107,21 +107,18 @@ void TCPConnection::EnableConnection() {
   }
 }
 
-void TCPConnection::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPConnection::OnClose(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
   on_close_callback_ = std::move(func);
 }
-void TCPConnection::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPConnection::OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
   on_connection_callback_ = std::move(func);
 }
-void TCPConnection::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPConnection::OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
   on_message_callback_ = std::move(func);
 }
 
 void TCPConnection::SetWriteBuffer(const char *msg) { write_buffer_->SetBuffer(msg); }
-const char *TCPConnection::GetReadBuffer() {
-  WarnIf(!read_buffer_, "GetReadBuffer(): read_buffer_ is none");
-  return read_buffer_->GetBuffer();
-}
+Buffer *TCPConnection::GetReadBuffer() { return read_buffer_.get(); }
 
 void TCPConnection::Send(const std::string &msg) {
   SetWriteBuffer(msg.c_str());
@@ -132,6 +129,7 @@ void TCPConnection::Send(const char *msg) {
   write();
 }
 
+// FIXME(wzy) there might be chances that HandleClose been called multiple times, queuing multiple callback into EventLoop::close_wait_list_
 void TCPConnection::HandleClose() {
   if (state_ == ConnectionState::Disconnected) {
     WarnIf(true, "HandleClose called while the TCPConnection::state_ == ConnectionState::Disconnected");
@@ -150,4 +148,4 @@ int TCPConnection::GetID() const { return connection_id_; }
 ConnectionState TCPConnection::GetConnectionState() const { return state_; }
 EventLoop *TCPConnection::GetEventLoop() const { return loop_; }
 Channel *TCPConnection::GetChannel() { return channel_.get(); }
-const char *TCPConnection::GetWriteBuffer() { return write_buffer_->GetBuffer(); }
+Buffer *TCPConnection::GetWriteBuffer() { return write_buffer_.get(); }

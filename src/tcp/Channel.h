@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "cppserver-common.h"
+#include "base/cppserver-common.h"
 
 class Channel {
  private:
@@ -49,8 +49,8 @@ class Channel {
 
   void SetReadyEvents(event_t ev);
 
-  void SetReadCallback(std::function<void()> const &callback);
-  void SetWriteCallback(std::function<void()> const &callback);
+  void SetReadCallback(const std::function<void()> &callback);
+  void SetWriteCallback(const std::function<void()> &callback);
 
   void SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn);
 };

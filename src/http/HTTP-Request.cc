@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-HTTPRequest::HTTPRequest() : method_(HTTPMethod::Invalid), version_(HTTPVersion::Unknown){};
+HTTPRequest::HTTPRequest() : method_(HTTPMethod::Invalid), version_(HTTPVersion::Invalid){};
 
 HTTPRequest::~HTTPRequest(){};
 
@@ -14,56 +14,52 @@ void HTTPRequest::SetVersion(const std::string &ver) {
   } else if (ver == "1.0") {
     version_ = HTTPVersion::HTTP10;
   } else {
-    version_ = HTTPVersion::Unknown;
+    version_ = HTTPVersion::Invalid;
   }
 }
 HTTPVersion HTTPRequest::GetVersion() const { return version_; }
 std::string HTTPRequest::GetVersionString() const {
-  std::string version;
-  if (version_ == HTTPVersion::HTTP11) {
-    version = "http1.1";
-  } else if (version_ == HTTPVersion::HTTP10) {
-    version = "http1.0";
-  } else {
-    version = "unknown";
+  switch (version_) {
+    case HTTPVersion::HTTP11:
+      return "HTTP/1.1";
+      break;
+    case HTTPVersion::HTTP10:
+      return "HTTP/1.0";
+      break;
+    default:
+      return "Invalid";
+      break;
   }
-  return version;
 }
 
 bool HTTPRequest::SetMethod(const std::string &method) {
   if (method == "GET") {
-    method_ = HTTPMethod::Get;
-  } else if (method == "POST") {
-    method_ = HTTPMethod::Post;
+    method_ = HTTPMethod::GET;
   } else if (method == "HEAD") {
-    method_ = HTTPMethod::Head;
-  } else if (method == "PUT") {
-    method_ = HTTPMethod::Put;
-  } else if (method == "Delete") {
-    method_ = HTTPMethod::Delete;
+    method_ = HTTPMethod::HEAD;
+  } else if (method == "POST") {
+    method_ = HTTPMethod::POST;
   } else {
     method_ = HTTPMethod::Invalid;
   }
-  // return false if Invalid
-  return method_ != HTTPMethod::Invalid;
+  return method_ != HTTPMethod::Invalid;  // return false if Invalid
 }
 HTTPMethod HTTPRequest::GetMethod() const { return method_; }
 std::string HTTPRequest::GetMethodString() const {
-  std::string method;
-  if (method_ == HTTPMethod::Get) {
-    method = "GET";
-  } else if (method_ == HTTPMethod::Post) {
-    method = "POST";
-  } else if (method_ == HTTPMethod::Head) {
-    method = "HEAD";
-  } else if (method_ == HTTPMethod::Put) {
-    method = "PUT";
-  } else if (method_ == HTTPMethod::Delete) {
-    method = "DELETE";
-  } else {
-    method = "INVALID";
+  switch (method_) {
+    case HTTPMethod::GET:
+      return "GET";
+      break;
+    case HTTPMethod::HEAD:
+      return "HEAD";
+      break;
+    case HTTPMethod::POST:
+      return "POST";
+      break;
+    default:
+      return "Invalid";
+      break;
   }
-  return method;
 }
 
 void HTTPRequest::SetUrl(const std::string &url) { url_ = std::move(url); }

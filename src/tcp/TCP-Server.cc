@@ -8,11 +8,11 @@
 #include <utility>
 
 #include "Acceptor.h"
-#include "CurrentThread.h"
 #include "EventLoop.h"
-#include "Exception.h"
 #include "TCP-Connection.h"
 #include "ThreadPool.h"
+#include "base/CurrentThread.h"
+#include "base/Exception.h"
 
 #define MAX_CONN_ID 1000
 
@@ -44,6 +44,9 @@ TCPServer::TCPServer(const char *ip, const int port) {
      */
     conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
       main_reactor_->CallOrQueue([this, conn]() {
+        // developer defined close function, used to free self-defined resources
+        on_close_callback_(conn.get());
+
         std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
         // close the TCPConnection
         int fd = conn->GetFD();
@@ -59,7 +62,7 @@ TCPServer::TCPServer(const char *ip, const int port) {
         conn->GetEventLoop()->DeleteChannel(conn->GetChannel());
       });
     });
-    // set TCPConnecion::on_connection_callback_. called in
+    // set TCPConnecion::on_connection_callback_, will be called in TCPConnection::EnableConnection
     conn->OnConnection(on_connection_callback_);
     // set TCPConnecion::on_message_callback_
     conn->OnMessage(on_message_callback_);
@@ -86,9 +89,10 @@ void TCPServer::Start() {
   main_reactor_->Loop();
 }
 
-void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> const &func) {
+void TCPServer::OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
   on_connection_callback_ = std::move(func);
 }
-void TCPServer::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> const &func) {
+void TCPServer::OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
   on_message_callback_ = std::move(func);
 }
+void TCPServer::OnClose(const std::function<void(TCPConnection *)> &func) { on_close_callback_ = std::move(func); }
