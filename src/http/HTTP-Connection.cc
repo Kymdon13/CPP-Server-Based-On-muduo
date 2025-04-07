@@ -21,7 +21,7 @@ void HTTPConnection::SetResponseCallback(std::function<void(const HTTPRequest *,
   response_callback_ = std::move(cb);
 }
 
-void HTTPConnection::SetTCPConnectionOnMessageCallback() {
+void HTTPConnection::EnableHTTPConnection() {
   tcp_connection_->OnMessage([this](const std::shared_ptr<TCPConnection> &conn) {
     if (ConnectionState::Connected != conn->GetConnectionState()) {
       WarnIf(true, "TCPConnection::on_message_callback_() called while disconnected");
@@ -40,16 +40,19 @@ void HTTPConnection::SetTCPConnectionOnMessageCallback() {
         response_callback_(http_context_->GetHTTPRequest(), &res);
         // send message
         conn->Send(res.GetResponse().c_str());
-        // if parsing went wrong or the client wish to close connection
+        // if the client wish to close connection
         if (res.IsClose()) {
           conn->HandleClose();
         }
         // reset the state of the parser
         http_context_->ResetState();
+        break;
       }
       case HTTPRequestParseState::INVALID: {
+        WarnIf(true, "HTTPRequest Parsed failed");
         conn->Send(HTTPResponse(true).GetResponse());
         conn->HandleClose();
+        break;
       }
       // TODO(wzy) other Invalid state to be handle
       default: {

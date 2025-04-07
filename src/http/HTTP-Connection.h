@@ -26,5 +26,5 @@ class HTTPConnection {
   // directly set the on_message_callback_ of TCPConnection, so we can have more customizability,
   // and that TCPConnection::EnableConnection executes after Acceptor::OnNewConnection,
   // it makes sure that Acceptor will not override the on_message_callback_ we set.
-  void SetTCPConnectionOnMessageCallback();
+  void EnableHTTPConnection();
 };

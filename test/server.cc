@@ -49,7 +49,7 @@ void HTTPResponseCallback(const HTTPRequest *req, HTTPResponse *res) {
 }
 
 int main() {
-  HTTPServer *server = new HTTPServer("127.0.0.1", 5000);
+  HTTPServer *server = new HTTPServer("0.0.0.0", 5000);
   server->SetResponseCallback(HTTPResponseCallback);
   server->Start();
 

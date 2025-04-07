@@ -34,12 +34,18 @@ class Channel {
   void HandleEvent() const;
 
   void EnableReading();
+  void DisableReading();
 
   void EnableWriting();
+  void DisableWriting();
+
+  void DisableAll();
 
   // XXX(wzy) there is no useET(), it is integrated into the ctor
 
   int GetFD() const;
+
+  void Remove();
 
   event_t GetListenEvent() const;
   event_t GetReadyEvent() const;

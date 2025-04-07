@@ -74,7 +74,7 @@ std::string HTTPResponse::GetResponse() {
   if (close_) {
     msg += "Connection: close\r\n";
   } else {
-    msg += "Connection: Keep-Alive\r\n";
+    msg += "Connection: keep-alive\r\n";
   }
 
   // add other headers

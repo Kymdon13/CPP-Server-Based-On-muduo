@@ -26,15 +26,10 @@ HTTPServer::HTTPServer(const char *ip, const int port) {
     http_connection_map_[fd_clnt] = std::make_unique<HTTPConnection>(conn);
     http_connection_map_[fd_clnt]->SetResponseCallback(response_callback_);
 
-    // set TCPConnection::on_message_callback_ through HTTPConnection, provides more customizability (you can custom the
-    // SetTCPConnectionOnMessageCallback function, for example, set different message callback according to different
+    // set TCPConnection::on_message_callback_ through HTTPConnection, provides more customizability (you can customize the
+    // EnableHTTPConnection function, for example, set different message callback according to different
     // ip)
-    // BUG(wzy)
-    http_connection_map_[fd_clnt]->SetTCPConnectionOnMessageCallback();
-    // conn->OnMessage([](std::shared_ptr<TCPConnection> conn){
-    //     std::cout << "Message from client [fd#" << conn->GetFD() << "]: " << conn->GetReadBuffer()->GetBuffer() << std::endl;
-    //     conn->Send(conn->GetReadBuffer()->GetBuffer());
-    // });
+    http_connection_map_[fd_clnt]->EnableHTTPConnection();
 
     // print out peer's info
     struct sockaddr_in addr_peer;

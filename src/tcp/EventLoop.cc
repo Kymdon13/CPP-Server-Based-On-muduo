@@ -14,22 +14,33 @@
 #include "Poller.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
+#include "timer/Timer.h"
+#include "timer/TimerQueue.h"
 
-void EventLoop::loop_close_wait_list_() {
-  // fetch callback from close_wait_list_ so sub threads can add new items when main thread is handling tmp_list
+
+void EventLoop::doPendingFunctors() {
+  // fetch callback from pendingFunctors_ so sub threads can add new items when main thread is handling tmp_list
   std::vector<std::function<void()>> tmp_list;
   {
-    std::unique_lock<std::mutex> lock(close_wait_list_mutex_);
-    tmp_list.swap(close_wait_list_);
+    std::unique_lock<std::mutex> lock(pendingFunctorsMutex_);
+    tmp_list.swap(pendingFunctors_);
   }
   for (auto &cb : tmp_list) {
     cb();
   }
 }
 
-EventLoop::EventLoop() {
-  poller_ = std::make_unique<Poller>();
+void EventLoop::wake() {
+  uint64_t val = 1;
+  ssize_t bytes_write = ::write(wakeup_fd_, &val, sizeof(val));
+  WarnIf(bytes_write != sizeof(val), "EventLoop::wake: bytes_write != sizeof(val)");
+}
 
+EventLoop::EventLoop()
+  : tid_(CurrentThread::gettid()),
+    poller_(std::make_unique<Poller>()),
+    timer_queue_(std::make_unique<TimerQueue>(this))
+{
   // create eventfd
   wakeup_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   // create Channel with eventfd and register it into current EventLoop
@@ -45,13 +56,20 @@ EventLoop::EventLoop() {
 
 EventLoop::~EventLoop() {}
 
+void EventLoop::Quit() {
+  CallOrQueue([this]() {
+    quit_ = true;
+  });
+  // wake up the loop
+  wake();
+}
+
 void EventLoop::Loop() {
-  tid_ = CurrentThread::gettid();
-  while (true) {
+  while (!quit_) {
     for (Channel *ready_channel : poller_->Poll()) {
       ready_channel->HandleEvent();
     }
-    loop_close_wait_list_();
+    doPendingFunctors();
   }
 }
 
@@ -59,20 +77,34 @@ void EventLoop::UpdateChannel(Channel *channel) const { poller_->UpdateChannel(c
 
 void EventLoop::DeleteChannel(Channel *channel) const { poller_->DeleteChannel(channel); }
 
-bool EventLoop::IsMainThread() { return tid_ == CurrentThread::gettid(); }
+bool EventLoop::IsLocalThread() { return tid_ == CurrentThread::gettid(); }
 
 void EventLoop::CallOrQueue(std::function<void()> cb) {
-  if (IsMainThread()) {
+  if (IsLocalThread()) {  //
     cb();
   } else {
-    // add to the close_wait_list_
+    // add to the pendingFunctors_
     {
-      std::unique_lock<std::mutex> lock(close_wait_list_mutex_);
-      close_wait_list_.emplace_back(std::move(cb));
+      std::unique_lock<std::mutex> lock(pendingFunctorsMutex_);
+      pendingFunctors_.emplace_back(std::move(cb));
     }
     // inform the eventfd (wakeup_fd_)
-    uint64_t val = 1;
-    ssize_t bytes_write = ::write(wakeup_fd_, &val, sizeof(val));
-    WarnIf(bytes_write != sizeof(val), "EventLoop::CallOrQueue: bytes_write != sizeof(val)");
+    wake();
   }
+}
+
+std::shared_ptr<Timer> EventLoop::RunAt(TimeStamp time, std::function<void()> cb) {
+  return timer_queue_->addTimer(time, 0., cb);
+}
+
+std::shared_ptr<Timer> EventLoop::RunAfter(double delay, std::function<void()> cb) {
+  return timer_queue_->addTimer(TimeStamp::Now() + delay, 0., cb);
+}
+
+std::shared_ptr<Timer> EventLoop::RunEvery(double interval, std::function<void()> cb) {
+  return timer_queue_->addTimer(TimeStamp::Now() + interval, interval, cb);
+}
+
+void EventLoop::canelTimer(const std::shared_ptr<Timer> &timer) {
+  timer_queue_->cancelTimer(timer);
 }

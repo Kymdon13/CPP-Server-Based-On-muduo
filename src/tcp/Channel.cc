@@ -75,13 +75,35 @@ void Channel::EnableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, true);
   FlushEvent();
 }
+void Channel::DisableReading() {
+  updateEvent(EPOLLIN | EPOLLPRI, false);
+  FlushEvent();
+}
 
 void Channel::EnableWriting() {
   updateEvent(EPOLLOUT, true);
   FlushEvent();
 }
+void Channel::DisableWriting() {
+  updateEvent(EPOLLOUT, false);
+  FlushEvent();
+}
+
+void Channel::DisableAll() {
+  listen_event_ = 0;  // disable all events
+  flushable_ = true;
+  FlushEvent();
+}
 
 int Channel::GetFD() const { return fd_; }
+
+void Channel::Remove() {
+  if (fd_ != -1) {
+    loop_->DeleteChannel(this);
+    ::close(fd_);
+    fd_ = -1;
+  }
+}
 
 event_t Channel::GetListenEvent() const { return listen_event_; }
 event_t Channel::GetReadyEvent() const { return ready_event_; }

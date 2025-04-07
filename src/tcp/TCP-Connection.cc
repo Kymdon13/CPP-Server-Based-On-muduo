@@ -129,7 +129,7 @@ void TCPConnection::Send(const char *msg) {
   write();
 }
 
-// FIXME(wzy) there might be chances that HandleClose been called multiple times, queuing multiple callback into EventLoop::close_wait_list_
+// FIXME(wzy) there might be chances that HandleClose been called multiple times, enqueue multiple callback into EventLoop::pendingFunctors_
 void TCPConnection::HandleClose() {
   if (state_ == ConnectionState::Disconnected) {
     WarnIf(true, "HandleClose called while the TCPConnection::state_ == ConnectionState::Disconnected");

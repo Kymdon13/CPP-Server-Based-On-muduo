@@ -33,7 +33,6 @@ enum class HTTPRequestParseState : unsigned char {
   BEFORE_VERSION,
   VERSION,
 
-  // TODO(wzy) not robust when parsing headers
   HEADER,
   HEADER_KEY,
   HEADER_VALUE,
