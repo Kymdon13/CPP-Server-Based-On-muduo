@@ -6,9 +6,9 @@
 #include <sstream>
 #include <utility>
 
+#include "HTTP-Connection.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
-#include "HTTP-Connection.h"
 #include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
@@ -26,9 +26,8 @@ HTTPServer::HTTPServer(const char *ip, const int port) {
     http_connection_map_[fd_clnt] = std::make_unique<HTTPConnection>(conn);
     http_connection_map_[fd_clnt]->SetResponseCallback(response_callback_);
 
-    // set TCPConnection::on_message_callback_ through HTTPConnection, provides more customizability (you can customize the
-    // EnableHTTPConnection function, for example, set different message callback according to different
-    // ip)
+    // set TCPConnection::on_message_callback_ through HTTPConnection, provides more customizability (you can customize
+    // the EnableHTTPConnection function, for example, set different message callback according to different ip)
     http_connection_map_[fd_clnt]->EnableHTTPConnection();
 
     // print out peer's info

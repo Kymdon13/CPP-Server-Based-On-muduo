@@ -14,12 +14,12 @@ class TimerQueue;
 
 class EventLoop {
  private:
- const pid_t tid_;
- std::unique_ptr<Poller> poller_;
- std::unique_ptr<TimerQueue> timer_queue_;
- int wakeup_fd_;
- std::unique_ptr<Channel> wakeup_channel_;
- // no need to init in the init list
+  const pid_t tid_;
+  std::unique_ptr<Poller> poller_;
+  std::unique_ptr<TimerQueue> timer_queue_;
+  int wakeup_fd_;
+  std::unique_ptr<Channel> wakeup_channel_;
+  // no need to init in the init list
   std::mutex pendingFunctorsMutex_;
   std::vector<std::function<void()>> pendingFunctors_;
   bool quit_ = false;
@@ -47,5 +47,5 @@ class EventLoop {
   std::shared_ptr<Timer> RunAt(TimeStamp time, std::function<void()> cb);
   std::shared_ptr<Timer> RunAfter(double delay, std::function<void()> cb);
   std::shared_ptr<Timer> RunEvery(double interval, std::function<void()> cb);
-  void canelTimer(const std::shared_ptr<Timer>& timer);
+  void canelTimer(const std::shared_ptr<Timer> &timer);
 };

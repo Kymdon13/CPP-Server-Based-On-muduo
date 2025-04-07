@@ -17,7 +17,6 @@
 #include "timer/Timer.h"
 #include "timer/TimerQueue.h"
 
-
 void EventLoop::doPendingFunctors() {
   // fetch callback from pendingFunctors_ so sub threads can add new items when main thread is handling tmp_list
   std::vector<std::function<void()>> tmp_list;
@@ -37,10 +36,9 @@ void EventLoop::wake() {
 }
 
 EventLoop::EventLoop()
-  : tid_(CurrentThread::gettid()),
-    poller_(std::make_unique<Poller>()),
-    timer_queue_(std::make_unique<TimerQueue>(this))
-{
+    : tid_(CurrentThread::gettid()),
+      poller_(std::make_unique<Poller>()),
+      timer_queue_(std::make_unique<TimerQueue>(this)) {
   // create eventfd
   wakeup_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   // create Channel with eventfd and register it into current EventLoop
@@ -57,9 +55,7 @@ EventLoop::EventLoop()
 EventLoop::~EventLoop() {}
 
 void EventLoop::Quit() {
-  CallOrQueue([this]() {
-    quit_ = true;
-  });
+  CallOrQueue([this]() { quit_ = true; });
   // wake up the loop
   wake();
 }
@@ -105,6 +101,4 @@ std::shared_ptr<Timer> EventLoop::RunEvery(double interval, std::function<void()
   return timer_queue_->addTimer(TimeStamp::Now() + interval, interval, cb);
 }
 
-void EventLoop::canelTimer(const std::shared_ptr<Timer> &timer) {
-  timer_queue_->cancelTimer(timer);
-}
+void EventLoop::canelTimer(const std::shared_ptr<Timer> &timer) { timer_queue_->cancelTimer(timer); }

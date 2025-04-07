@@ -65,7 +65,8 @@ int main() {
       write_bytes = write(sockfd, http_request.c_str(), http_request.size());
       flag = true;
     } else {
-      write_bytes = write(sockfd, buf, sizeof(buf));
+      write_bytes = write(sockfd, http_request.c_str(), http_request.size());
+      // write_bytes = write(sockfd, buf, sizeof(buf));
     }
 
     if (write_bytes == -1) {
@@ -75,7 +76,9 @@ int main() {
     bzero(&buf, sizeof(buf));
     ssize_t read_bytes = read(sockfd, buf, sizeof(buf));
     if (read_bytes > 0) {
-      printf("message from server: %s\n", buf);
+      printf("==========================\n");
+      printf("message from server:\n%s\n", buf);
+      printf("==========================\n");
     } else if (read_bytes == 0) {
       printf("server socket disconnected!\n");
       close(sockfd);

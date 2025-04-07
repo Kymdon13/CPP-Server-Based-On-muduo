@@ -4,24 +4,25 @@
 
 #include <functional>
 
-#include "base/cppserver-common.h"
 #include "TimeStamp.h"
+#include "base/cppserver-common.h"
 
 class Timer {
-private:
-    TimeStamp expiration_;
-    std::function<void()> cb_;
-    bool is_interval_;
-    time_t interval_;
-public:
-    DISABLE_COPYING_AND_MOVING(Timer);
-    Timer(TimeStamp timestamp, double interval, const std::function<void()> &cb);
+ private:
+  TimeStamp expiration_;
+  std::function<void()> cb_;
+  bool is_interval_;
+  time_t interval_;
 
-    void Restart(TimeStamp now);
+ public:
+  DISABLE_COPYING_AND_MOVING(Timer);
+  Timer(TimeStamp timestamp, double interval, const std::function<void()> &cb);
 
-    void Run() const;
+  void Restart(TimeStamp now);
 
-    TimeStamp GetExpiration() const;
+  void Run() const;
 
-    bool IsInterval() const;
+  TimeStamp GetExpiration() const;
+
+  bool IsInterval() const;
 };

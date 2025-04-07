@@ -7,12 +7,13 @@
 #include "HTTP-Request.h"
 #include "HTTP-Response.h"
 #include "base/Exception.h"
+#include "base/Utils.h"
 #include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 
 HTTPConnection::HTTPConnection(const std::shared_ptr<TCPConnection> &conn) {
-    tcp_connection_ = conn;
-    http_context_ = std::make_unique<HTTPContext>();
+  tcp_connection_ = conn;
+  http_context_ = std::make_unique<HTTPContext>();
 }
 
 HTTPConnection::~HTTPConnection() {}
@@ -27,14 +28,14 @@ void HTTPConnection::EnableHTTPConnection() {
       WarnIf(true, "TCPConnection::on_message_callback_() called while disconnected");
       return;
     }
-    HTTPRequestParseState ret = http_context_->ParseRequest(conn->GetReadBuffer()->GetBuffer(), static_cast<ssize_t>(conn->GetReadBuffer()->Size()));
+    HTTPRequestParseState ret = http_context_->ParseRequest(conn->GetReadBuffer()->GetBuffer(),
+                                                            static_cast<ssize_t>(conn->GetReadBuffer()->Size()));
     switch (ret) {
       case HTTPRequestParseState::COMPLETE: {
         HTTPRequest *req = http_context_->GetHTTPRequest();
         // check if client wish to keep the connection
         std::string conn_state = req->GetHeaderByKey("Connection");
-        bool is_clnt_want_to_close = ("Close" == conn_state);
-        is_clnt_want_to_close |= (HTTPVersion::HTTP10 == req->GetVersion() && "keep-alive" != conn_state);
+        bool is_clnt_want_to_close = (utils::toLower(conn_state) == "close");
         // generate response
         HTTPResponse res(is_clnt_want_to_close);
         response_callback_(http_context_->GetHTTPRequest(), &res);

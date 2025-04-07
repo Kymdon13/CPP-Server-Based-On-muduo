@@ -7,29 +7,30 @@
 #define SECOND2MICROSECOND 1000000
 
 class TimeStamp {
-private:
-    // time in micro seconds
-    time_t time_;
-public:
-    TimeStamp();
-    explicit TimeStamp(time_t time);
+ private:
+  // time in micro seconds
+  time_t time_;
 
-    bool operator<(const TimeStamp &rhs) const;
-    bool operator<=(const TimeStamp &rhs) const;
-    bool operator==(const TimeStamp &rhs) const;
+ public:
+  TimeStamp();
+  explicit TimeStamp(time_t time);
 
-    TimeStamp operator+(const double& time);
+  bool operator<(const TimeStamp &rhs) const;
+  bool operator<=(const TimeStamp &rhs) const;
+  bool operator==(const TimeStamp &rhs) const;
 
-    std::string ToFormattedString() const;
+  TimeStamp operator+(const double &time);
 
-    time_t GetTime() const;
-    void SetTime(time_t time);
+  std::string ToFormattedString() const;
 
-    bool IsValid() const { return time_ > 0; }
+  time_t GetTime() const;
+  void SetTime(time_t time);
 
-    static inline TimeStamp Now() {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return TimeStamp(tv.tv_sec * SECOND2MICROSECOND + tv.tv_usec);
-    }
+  bool IsValid() const { return time_ > 0; }
+
+  static inline TimeStamp Now() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return TimeStamp(tv.tv_sec * SECOND2MICROSECOND + tv.tv_usec);
+  }
 };
