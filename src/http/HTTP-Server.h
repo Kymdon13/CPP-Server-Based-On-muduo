@@ -26,7 +26,7 @@ class HTTPServer {
   HTTPServer(const char *ip, const int port);
   ~HTTPServer();
 
-  void SetResponseCallback(const std::function<void(const HTTPRequest *, HTTPResponse *)> &cb);
+  void SetResponseCallback(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
 
   void OnMessage(const std::shared_ptr<TCPConnection> &conn);
 

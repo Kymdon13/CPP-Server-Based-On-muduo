@@ -77,4 +77,4 @@ void Acceptor::Listen() {
   WarnIf(-1 == ::listen(listen_fd_, SOMAXCONN), "Acceptor::Listen failed");
 }
 
-void Acceptor::OnNewConnection(std::function<void(int)> const &cb) { on_new_connection_callback_ = std::move(cb); }
+void Acceptor::OnNewConnection(std::function<void(int)> cb) { on_new_connection_callback_ = std::move(cb); }

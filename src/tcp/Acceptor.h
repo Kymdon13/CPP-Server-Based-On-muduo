@@ -23,5 +23,5 @@ class Acceptor {
 
   void Listen();
 
-  void OnNewConnection(std::function<void(int)> const &cb);
+  void OnNewConnection(std::function<void(int)> cb);
 };

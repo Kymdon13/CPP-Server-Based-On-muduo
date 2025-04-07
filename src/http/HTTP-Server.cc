@@ -42,7 +42,7 @@ HTTPServer::HTTPServer(const char *ip, const int port) {
   /**
    * set TCPServer::on_close_callback_, erase HTTPConnection from http_connection_map_
    */
-  tcp_server_->OnClose([this](TCPConnection *conn) {
+  tcp_server_->OnClose([this](const std::shared_ptr<TCPConnection> &conn) {
     int fd_clnt = conn->GetFD();
     auto it = http_connection_map_.find(fd_clnt);
     if (it == http_connection_map_.end()) {
@@ -57,7 +57,7 @@ HTTPServer::HTTPServer(const char *ip, const int port) {
 
 HTTPServer::~HTTPServer() {}
 
-void HTTPServer::SetResponseCallback(const std::function<void(const HTTPRequest *, HTTPResponse *)> &cb) {
+void HTTPServer::SetResponseCallback(std::function<void(const HTTPRequest *, HTTPResponse *)> cb) {
   response_callback_ = std::move(cb);
 }
 

@@ -39,7 +39,7 @@ class HTTPResponse {
   void SetStatus(HTTPStatus status);
   void SetContentType(HTTPContentType content_type);
   void AddHeader(const std::string &key, const std::string &value);
-  void SetBody(const std::string &body);
+  void SetBody(std::string body);
 
   bool IsClose();
   void SetClose(bool close);

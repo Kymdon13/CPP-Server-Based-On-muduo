@@ -24,7 +24,7 @@ class TCPServer {
   std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
   /// @brief for developer to customize, in my opinion, passing TCPConnection is enough to get all the info a
   /// self-defined obj needs to free all its resources
-  std::function<void(TCPConnection *)> on_close_callback_;
+  std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
 
   size_t next_connection_id_{0};
 
@@ -37,9 +37,9 @@ class TCPServer {
 
   /// @brief for developer to customize (for example, you want to print something when connected), the
   /// Acceptor->on_new_connection_callback_ is registered by the ctor
-  void OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
+  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
   /// @brief for developer to customize
-  void OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
+  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
   /// @brief for developer to customize
-  void OnClose(const std::function<void(TCPConnection *)> &func);
+  void OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
 };

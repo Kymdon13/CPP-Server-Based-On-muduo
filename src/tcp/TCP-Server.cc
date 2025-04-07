@@ -45,7 +45,7 @@ TCPServer::TCPServer(const char *ip, const int port) {
     conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
       main_reactor_->CallOrQueue([this, conn]() {
         // developer defined close function, used to free self-defined resources
-        on_close_callback_(conn.get());
+        on_close_callback_(conn);
 
         std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
         // close the TCPConnection
@@ -89,10 +89,10 @@ void TCPServer::Start() {
   main_reactor_->Loop();
 }
 
-void TCPServer::OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
+void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_connection_callback_ = std::move(func);
 }
-void TCPServer::OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
+void TCPServer::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_message_callback_ = std::move(func);
 }
-void TCPServer::OnClose(const std::function<void(TCPConnection *)> &func) { on_close_callback_ = std::move(func); }
+void TCPServer::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) { on_close_callback_ = std::move(func); }

@@ -55,8 +55,8 @@ class Channel {
 
   void SetReadyEvents(event_t ev);
 
-  void SetReadCallback(const std::function<void()> &callback);
-  void SetWriteCallback(const std::function<void()> &callback);
+  void SetReadCallback(std::function<void()> callback);
+  void SetWriteCallback(std::function<void()> callback);
 
   void SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn);
 };

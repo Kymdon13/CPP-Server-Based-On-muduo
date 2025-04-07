@@ -107,13 +107,13 @@ void TCPConnection::EnableConnection() {
   }
 }
 
-void TCPConnection::OnClose(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
+void TCPConnection::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_close_callback_ = std::move(func);
 }
-void TCPConnection::OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
+void TCPConnection::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_connection_callback_ = std::move(func);
 }
-void TCPConnection::OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func) {
+void TCPConnection::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_message_callback_ = std::move(func);
 }
 

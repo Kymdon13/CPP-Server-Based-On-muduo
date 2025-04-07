@@ -44,21 +44,21 @@ class HTTPRequest {
   HTTPMethod GetMethod() const;
   std::string GetMethodString() const;
 
-  void SetUrl(const std::string &url);
+  void SetUrl(std::string url);
   const std::string &GetUrl() const;
 
   void SetRequestParams(const std::string &key, const std::string &value);
   std::string GetRequestValueByKey(const std::string &key) const;
   const std::unordered_map<std::string, std::string> &GetRequestParams() const;
 
-  void SetProtocol(const std::string &protocol);
+  void SetProtocol(std::string protocol);
   const std::string &GetProtocol() const;
 
   void AddHeader(const std::string &field, const std::string &value);
   std::string GetHeaderByKey(const std::string &field) const;
   const std::unordered_map<std::string, std::string> &GetHeaders() const;
 
-  void SetBody(const std::string &body);
+  void SetBody(std::string body);
   const std::string &GetBody() const;
 
  private:

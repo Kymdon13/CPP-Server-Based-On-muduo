@@ -58,7 +58,7 @@ void HTTPResponse::SetContentType(HTTPContentType content_type) {
 
 void HTTPResponse::AddHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
 
-void HTTPResponse::SetBody(const std::string &body) { body_ = std::move(body); }
+void HTTPResponse::SetBody(std::string body) { body_ = std::move(body); }
 
 bool HTTPResponse::IsClose() { return close_; }
 

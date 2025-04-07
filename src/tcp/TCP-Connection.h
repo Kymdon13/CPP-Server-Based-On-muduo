@@ -50,9 +50,9 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   /// @brief register related Channel to the system epoll, init Channel::tcp_connection_ptr_
   void EnableConnection();
 
-  void OnClose(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
-  void OnConnection(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
-  void OnMessage(const std::function<void(std::shared_ptr<TCPConnection>)> &func);
+  void OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
 
   /**
    * these two methods are bound together in real application

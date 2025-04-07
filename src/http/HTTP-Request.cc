@@ -62,7 +62,7 @@ std::string HTTPRequest::GetMethodString() const {
   }
 }
 
-void HTTPRequest::SetUrl(const std::string &url) { url_ = std::move(url); }
+void HTTPRequest::SetUrl(std::string url) { url_ = std::move(url); }
 const std::string &HTTPRequest::GetUrl() const { return url_; }
 
 void HTTPRequest::SetRequestParams(const std::string &key, const std::string &value) { request_params_[key] = value; }
@@ -73,7 +73,7 @@ std::string HTTPRequest::GetRequestValueByKey(const std::string &key) const {
 }
 const std::unordered_map<std::string, std::string> &HTTPRequest::GetRequestParams() const { return request_params_; }
 
-void HTTPRequest::SetProtocol(const std::string &protocol) { protocol_ = std::move(protocol); }
+void HTTPRequest::SetProtocol(std::string protocol) { protocol_ = std::move(protocol); }
 const std::string &HTTPRequest::GetProtocol() const { return protocol_; }
 
 void HTTPRequest::AddHeader(const std::string &field, const std::string &value) { headers_[field] = value; }
@@ -84,5 +84,5 @@ std::string HTTPRequest::GetHeaderByKey(const std::string &field) const {
 }
 const std::unordered_map<std::string, std::string> &HTTPRequest::GetHeaders() const { return headers_; }
 
-void HTTPRequest::SetBody(const std::string &str) { body_ = std::move(str); }
+void HTTPRequest::SetBody(std::string str) { body_ = std::move(str); }
 const std::string &HTTPRequest::GetBody() const { return body_; }
