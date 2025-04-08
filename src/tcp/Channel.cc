@@ -18,8 +18,8 @@ void Channel::updateEvent(event_t event, bool enable) {
   flushable_ = true;
 }
 
-Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET)
-    : fd_(fd), loop_(loop), listen_event_(0), ready_event_(0) {
+Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET, bool is_connection)
+    : fd_(fd), loop_(loop), listen_event_(0), ready_event_(0), is_connection_(is_connection) {
   // set listen_event_
   if (enableReading) {
     updateEvent(EPOLLIN | EPOLLPRI, true);
@@ -48,13 +48,16 @@ void Channel::FlushEvent() {
 
 void Channel::HandleEvent() const {
   // use_count_lock only exists during the HandleEvent method
-  std::shared_ptr<TCPConnection> use_count_lock = tcp_connection_ptr_.lock();
-  // TODO(wzy) there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
-  // Channel, we must find a way to detect whether the caller is an Acceptor if (!use_count_lock) {  // if failed to
-  // promote the weak_ptr to shared_ptr
-  //   WarnIf(true, "Channel::HandleEvent() failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue");
-  //   return;
-  // } else if ()
+  std::shared_ptr<TCPConnection> use_count_lock;
+  if (is_connection_) {
+    use_count_lock = tcp_connection_ptr_.lock();
+    // TODO(wzy) there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
+    // Channel, we must find a way to detect whether the caller is an Acceptor
+    if (!use_count_lock) {  // if failed to promote the weak_ptr to shared_ptr
+      WarnIf(true, "Channel::HandleEvent() failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue");
+      return;
+    }
+  }
   if (ready_event_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
     if (read_callback_) {
       read_callback_();

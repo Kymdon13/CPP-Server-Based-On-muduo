@@ -14,12 +14,13 @@
 #include "Channel.h"
 #include "EventLoop.h"
 #include "base/Exception.h"
+#include "tcp/TCP-Connection.h"
 
 Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), listen_fd_(-1) {
   Create();
   Bind(ip, port);
   Listen();
-  channel_ = std::make_unique<Channel>(listen_fd_, loop, true, false, false);  // use Level Trigger
+  channel_ = std::make_unique<Channel>(listen_fd_, loop, true, false, false, false);  // use Level Trigger
 
   // register accept connection callback in the acceptor's channel
   channel_->SetReadCallback([this]() {

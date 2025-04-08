@@ -11,7 +11,7 @@
 
 class TCPServer {
  private:
-  std::unique_ptr<EventLoop> main_reactor_;
+  EventLoop *loop_;
 
   std::unique_ptr<Acceptor> acceptor_;
   std::unordered_map<int, std::shared_ptr<TCPConnection>> connection_map_;
@@ -30,7 +30,7 @@ class TCPServer {
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPServer);
-  TCPServer(const char *ip, const int port);
+  TCPServer(EventLoop* loop, const char *ip, const int port);
   ~TCPServer() = default;
 
   void Start();

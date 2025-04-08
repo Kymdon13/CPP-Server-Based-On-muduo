@@ -7,22 +7,23 @@
 #include <sstream>
 #include <utility>
 
-#include "Acceptor.h"
-#include "EventLoop.h"
-#include "TCP-Connection.h"
-#include "ThreadPool.h"
+#include "tcp/Acceptor.h"
+#include "tcp/EventLoop.h"
+#include "tcp/TCP-Connection.h"
+#include "tcp/ThreadPool.h"
+#include "tcp/Channel.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
 
 #define MAX_CONN_ID 1000
 
-TCPServer::TCPServer(const char *ip, const int port) {
-  main_reactor_ = std::make_unique<EventLoop>();
-
+TCPServer::TCPServer(EventLoop* loop, const char *ip, const int port)
+  : loop_(loop)
+{
   /**
    * init main reactor as Acceptor
    */
-  acceptor_ = std::make_unique<Acceptor>(main_reactor_.get(), ip, port);
+  acceptor_ = std::make_unique<Acceptor>(loop_, ip, port);
 
   /**
    * set Acceptor::on_new_connection_callback_
@@ -43,12 +44,12 @@ TCPServer::TCPServer(const char *ip, const int port) {
      * set TCPConnecion::on_close_callback_
      */
     conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
-      main_reactor_->CallOrQueue([this, conn]() {
+      loop_->CallOrQueue([this, conn]() {
         // developer defined close function, used to free self-defined resources
         on_close_callback_(conn);
 
         std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
-        // close the TCPConnection
+        // remove the TCPConnection from the connection_map_
         int fd = conn->GetFD();
         auto it = connection_map_.find(fd);
         if (it == connection_map_.end()) {
@@ -59,9 +60,12 @@ TCPServer::TCPServer(const char *ip, const int port) {
         }
         connection_map_.erase(fd);
         // remove the channel from the system epoll
-        conn->GetEventLoop()->DeleteChannel(conn->GetChannel());
+        conn->GetChannel()->Remove();
       });
     });
+    /**
+     * set TCPConnecion's other callbacks
+     */
     // set TCPConnecion::on_connection_callback_, will be called in TCPConnection::EnableConnection
     conn->OnConnection(on_connection_callback_);
     // set TCPConnecion::on_message_callback_
@@ -85,8 +89,8 @@ TCPServer::TCPServer(const char *ip, const int port) {
 void TCPServer::Start() {
   // dispatch the sub reactors to the threads
   thread_pool_->Init();
-
-  main_reactor_->Loop();
+  // start looping
+  loop_->Loop();
 }
 
 void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
@@ -95,4 +99,6 @@ void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)>
 void TCPServer::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_message_callback_ = std::move(func);
 }
-void TCPServer::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) { on_close_callback_ = std::move(func); }
+void TCPServer::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+  on_close_callback_ = std::move(func);
+}

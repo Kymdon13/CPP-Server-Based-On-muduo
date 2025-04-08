@@ -18,13 +18,13 @@ HTTPConnection::HTTPConnection(const std::shared_ptr<TCPConnection> &conn) {
 
 HTTPConnection::~HTTPConnection() {}
 
-void HTTPConnection::SetResponseCallback(std::function<void(const HTTPRequest *, HTTPResponse *)> cb) {
-  response_callback_ = std::move(cb);
+void HTTPConnection::OnMessage(std::function<void(const HTTPRequest *, HTTPResponse *)> cb) {
+  on_message_callback_ = std::move(cb);
 }
 
 void HTTPConnection::EnableHTTPConnection() {
   tcp_connection_->OnMessage([this](const std::shared_ptr<TCPConnection> &conn) {
-    if (ConnectionState::Connected != conn->GetConnectionState()) {
+    if (TCPState::Connected != conn->GetConnectionState()) {
       WarnIf(true, "TCPConnection::on_message_callback_() called while disconnected");
       return;
     }
@@ -38,9 +38,11 @@ void HTTPConnection::EnableHTTPConnection() {
         bool is_clnt_want_to_close = (utils::toLower(conn_state) == "close");
         // generate response
         HTTPResponse res(is_clnt_want_to_close);
-        response_callback_(http_context_->GetHTTPRequest(), &res);
+        on_message_callback_(http_context_->GetHTTPRequest(), &res);
         // send message
-        conn->Send(res.GetResponse().c_str());
+        if (!conn->Send(res.GetResponse().c_str())) {
+          break;
+        }
         // if the client wish to close connection
         if (res.IsClose()) {
           conn->HandleClose();
@@ -51,13 +53,17 @@ void HTTPConnection::EnableHTTPConnection() {
       }
       case HTTPRequestParseState::INVALID: {
         WarnIf(true, "HTTPRequest Parsed failed");
-        conn->Send(HTTPResponse(true).GetResponse());
+        if (!conn->Send(HTTPResponse(true).GetResponse())) {
+          break;
+        }
         conn->HandleClose();
         break;
       }
       // TODO(wzy) other Invalid state to be handle
       default: {
-        conn->Send(HTTPResponse(true).GetResponse());
+        if (!conn->Send(HTTPResponse(true).GetResponse())) {
+          break;
+        }
         conn->HandleClose();
       } break;
     }

@@ -49,8 +49,9 @@ void HTTPResponseCallback(const HTTPRequest *req, HTTPResponse *res) {
 }
 
 int main() {
-  HTTPServer *server = new HTTPServer("0.0.0.0", 5000);
-  server->SetResponseCallback(HTTPResponseCallback);
+  EventLoop *loop = new EventLoop();
+  HTTPServer *server = new HTTPServer(loop, "0.0.0.0", 5000);
+  server->OnMessage(HTTPResponseCallback);
   server->Start();
 
   delete server;

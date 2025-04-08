@@ -19,13 +19,14 @@ class Channel {
 
   std::weak_ptr<TCPConnection> tcp_connection_ptr_;
 
+  bool is_connection_{false};
+
   /// @brief modify listen_event_
   void updateEvent(event_t event, bool enable);
 
  public:
   DISABLE_COPYING_AND_MOVING(Channel);
-  Channel(int fd, EventLoop *loop) : Channel(fd, loop, true, false, true) {}
-  Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET);
+  Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET, bool is_connection);
   ~Channel();
 
   /// @brief call epoll_ctl

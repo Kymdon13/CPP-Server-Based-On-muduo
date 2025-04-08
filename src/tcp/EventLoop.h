@@ -47,5 +47,5 @@ class EventLoop {
   std::shared_ptr<Timer> RunAt(TimeStamp time, std::function<void()> cb);
   std::shared_ptr<Timer> RunAfter(double delay, std::function<void()> cb);
   std::shared_ptr<Timer> RunEvery(double interval, std::function<void()> cb);
-  void canelTimer(const std::shared_ptr<Timer> &timer);
+  void CanelTimer(const std::shared_ptr<Timer> &timer);
 };

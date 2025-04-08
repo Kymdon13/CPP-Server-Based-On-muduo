@@ -17,6 +17,7 @@ class Channel;
 class TimerQueue {
  private:
   using Entry = std::pair<TimeStamp, std::shared_ptr<Timer>>;
+  // make sure the nullptr is the biggest
   struct SharedPointerCompare {
     bool operator()(const Entry &lhs, const Entry &rhs) const {
       if (lhs.first == rhs.first) {
@@ -41,6 +42,9 @@ class TimerQueue {
   std::set<Entry, SharedPointerCompare> timers_;
   // for cancel purpose
   std::set<ActiveEntry> active_timers_;
+  // consider the case that the timer is canceled in its own callback
+  bool is_doing_timer_callback_{false};
+  std::set<ActiveEntry> cancelingTimers_;
 
   std::vector<Entry> getExpired(TimeStamp now);
   void reset(const std::vector<Entry> &expired, TimeStamp now);

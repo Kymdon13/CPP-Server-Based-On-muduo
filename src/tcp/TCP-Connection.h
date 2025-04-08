@@ -5,42 +5,48 @@
 #include <string>
 
 #include "base/cppserver-common.h"
+#include "timer/TimeStamp.h"
 
-enum class ConnectionState : uint8_t {
+enum class TCPState : uint8_t {
   Invalid = 1,
-  HandShaking,  // HandShaking = 2, ...
   Connected,
   Disconnected,
-  Failed
+  Closing
 };
+
+class Timer;
 
 class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
  private:
   EventLoop *loop_;
-
   int connection_fd_;
   int connection_id_;
-  ConnectionState state_{ConnectionState::Invalid};
+  TCPState state_{TCPState::Invalid};
+  TimeStamp last_active_time_;
+  std::shared_ptr<Timer> timer_;
 
   // heap member belong to this object
   std::unique_ptr<Channel> channel_;
   std::unique_ptr<Buffer> read_buffer_;
   std::unique_ptr<Buffer> write_buffer_;
 
-  /// @brief on_close_callback_ will
   std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
 
   // FIXME(wzy) message boundary too simple
   /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
-  void readNonBlocking();
+  /// @return false if closing the connection
+  bool readNonBlocking();
   /// @brief clear the read_buffer_ and read the msg to read_buffer_
-  void read();
+  /// @return false if closing the connection
+  bool read();
 
-  void writeNonBlocking();
+  /// @return false if closing the connection
+  bool writeNonBlocking();
   /// @brief send the msg in send_buffer_, and clear the send_buffer_
-  void write();
+  /// @return false if closing the connection
+  bool write();
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPConnection);
@@ -64,16 +70,21 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   Buffer *GetReadBuffer();
 
   /// @brief main sending interface for user
-  void Send(const std::string &msg);
-  void Send(const char *msg);
+  bool Send(const std::string &msg);
+  bool Send(const char *msg);
 
   /// @brief call on_close_callback_
   void HandleClose();
 
   int GetFD() const;
   int GetID() const;
-  ConnectionState GetConnectionState() const;
+  TCPState GetConnectionState() const;
   EventLoop *GetEventLoop() const;
   Channel *GetChannel();
   Buffer *GetWriteBuffer();
+
+  void RefreshTimeStamp();
+  TimeStamp GetLastActiveTime() const;
+  void SetTimer(std::shared_ptr<Timer> timer);
+  std::shared_ptr<Timer> GetTimer() const;
 };

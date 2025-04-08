@@ -42,7 +42,7 @@ EventLoop::EventLoop()
   // create eventfd
   wakeup_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   // create Channel with eventfd and register it into current EventLoop
-  wakeup_channel_ = std::make_unique<Channel>(wakeup_fd_, this);
+  wakeup_channel_ = std::make_unique<Channel>(wakeup_fd_, this, true, false, true, false);
   // set
   wakeup_channel_->SetReadCallback([this]() {
     uint64_t val;
@@ -101,4 +101,4 @@ std::shared_ptr<Timer> EventLoop::RunEvery(double interval, std::function<void()
   return timer_queue_->addTimer(TimeStamp::Now() + interval, interval, cb);
 }
 
-void EventLoop::canelTimer(const std::shared_ptr<Timer> &timer) { timer_queue_->cancelTimer(timer); }
+void EventLoop::CanelTimer(const std::shared_ptr<Timer> &timer) { timer_queue_->cancelTimer(timer); }

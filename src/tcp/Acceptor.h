@@ -5,6 +5,8 @@
 
 #include "base/cppserver-common.h"
 
+class TCPConnection;
+
 class Acceptor {
  private:
   EventLoop *loop_;

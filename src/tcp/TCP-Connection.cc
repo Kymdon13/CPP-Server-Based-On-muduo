@@ -9,13 +9,14 @@
 #include <string>
 #include <utility>
 
-#include "Buffer.h"
-#include "Channel.h"
+#include "tcp/Buffer.h"
+#include "tcp/Channel.h"
+#include "tcp/EventLoop.h"
 #include "base/Exception.h"
 
 #define BUFFER_SIZE 4096  // determine how many chars can be read into read_buffer_ at once
 
-void TCPConnection::readNonBlocking() {
+bool TCPConnection::readNonBlocking() {
   char buf[BUFFER_SIZE];
   while (true) {
     memset(buf, 0, sizeof(buf));
@@ -31,19 +32,20 @@ void TCPConnection::readNonBlocking() {
       }
     } else if (bytes_read == 0) {  // peer closed connection
       HandleClose();
-      break;
+      return false;
     } else {  // error
       HandleClose();
-      break;
+      return false;
     }
   }
+  return true;
 }
-void TCPConnection::read() {
+bool TCPConnection::read() {
   read_buffer_->Clear();
-  readNonBlocking();
+  return readNonBlocking();
 }
 
-void TCPConnection::writeNonBlocking() {
+bool TCPConnection::writeNonBlocking() {
   size_t write_buffer_size = write_buffer_->Size();
   // create a temp buf of type 'char[]', cuz ::write() does not support string
   char buf[write_buffer_size];
@@ -61,27 +63,38 @@ void TCPConnection::writeNonBlocking() {
       }
       // other situation is error
       HandleClose();
-      break;
+      return false;
     }
     data_left -= bytes_write;
   }
+  return true;
 }
-void TCPConnection::write() {
-  writeNonBlocking();
+bool TCPConnection::write() {
+  bool closing = writeNonBlocking();
   write_buffer_->Clear();
+  return closing;
 }
 
 TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_id)
-    : loop_(loop), connection_fd_(connection_fd), connection_id_(connection_id) {
+    : loop_(loop),
+    connection_fd_(connection_fd),
+    connection_id_(connection_id),
+    last_active_time_(TimeStamp::Now()),
+    timer_(nullptr)
+{
   if (nullptr == loop) {
     throw std::invalid_argument("EventLoop is nullptr.");
   }
 
   // create Channel
-  channel_ = std::make_unique<Channel>(connection_fd, loop, true, false, true);  // Reading, ET by default
+  channel_ = std::make_unique<Channel>(connection_fd, loop, true, false, true, true);  // Reading, ET by default
   // set the Channel->read_callback_
   channel_->SetReadCallback([this]() {
-    read();
+    RefreshTimeStamp();
+    if (!read()) {
+      return;
+    }
+    // call on_message_callback_ if read() is successful
     if (on_message_callback_) {
       on_message_callback_(shared_from_this());
     } else {
@@ -98,7 +111,7 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
 TCPConnection::~TCPConnection() { ::close(connection_fd_); }
 
 void TCPConnection::EnableConnection() {
-  state_ = ConnectionState::Connected;
+  state_ = TCPState::Connected;
   channel_->SetTCPConnectionPtr(shared_from_this());
   // use epoll_ctl(EPOLL_CTL_ADD) to really start listening on events
   channel_->FlushEvent();
@@ -120,23 +133,22 @@ void TCPConnection::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)
 void TCPConnection::SetWriteBuffer(const char *msg) { write_buffer_->SetBuffer(msg); }
 Buffer *TCPConnection::GetReadBuffer() { return read_buffer_.get(); }
 
-void TCPConnection::Send(const std::string &msg) {
+bool TCPConnection::Send(const std::string &msg) {
   SetWriteBuffer(msg.c_str());
-  write();
+  return write();
 }
-void TCPConnection::Send(const char *msg) {
+bool TCPConnection::Send(const char *msg) {
   SetWriteBuffer(msg);
-  write();
+  return write();
 }
 
-// FIXME(wzy) there might be chances that HandleClose been called multiple times, enqueue multiple callback into
 // EventLoop::pendingFunctors_
 void TCPConnection::HandleClose() {
-  if (state_ == ConnectionState::Disconnected) {
-    WarnIf(true, "HandleClose called while the TCPConnection::state_ == ConnectionState::Disconnected");
+  if (state_ == TCPState::Disconnected) {
+    WarnIf(true, "HandleClose called while the TCPConnection::state_ == TCPState::Disconnected");
     return;
   }
-  state_ = ConnectionState::Disconnected;
+  state_ = TCPState::Disconnected;
   if (on_close_callback_) {
     on_close_callback_(shared_from_this());
   } else {
@@ -146,7 +158,14 @@ void TCPConnection::HandleClose() {
 
 int TCPConnection::GetFD() const { return connection_fd_; }
 int TCPConnection::GetID() const { return connection_id_; }
-ConnectionState TCPConnection::GetConnectionState() const { return state_; }
+TCPState TCPConnection::GetConnectionState() const { return state_; }
 EventLoop *TCPConnection::GetEventLoop() const { return loop_; }
 Channel *TCPConnection::GetChannel() { return channel_.get(); }
 Buffer *TCPConnection::GetWriteBuffer() { return write_buffer_.get(); }
+
+void TCPConnection::RefreshTimeStamp() { last_active_time_ = TimeStamp::Now(); }
+TimeStamp TCPConnection::GetLastActiveTime() const { return last_active_time_; }
+void TCPConnection::SetTimer(std::shared_ptr<Timer> timer) {
+  timer_ = std::move(timer);
+}
+std::shared_ptr<Timer> TCPConnection::GetTimer() const { return timer_; }

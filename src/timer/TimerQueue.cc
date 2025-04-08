@@ -5,6 +5,7 @@
 
 #include <cassert>
 
+#include "base/Exception.h"
 #include "Timer.h"
 #include "tcp/EventLoop.h"
 
@@ -41,7 +42,8 @@ void TimerQueue::reset(const std::vector<Entry> &expired, TimeStamp now) {
   // reset the timers
   for (auto &entry : expired) {
     auto timer = entry.second;
-    if (timer->IsInterval()) {
+    // filter out the timers in the cancelingTimers_
+    if (timer->IsInterval() && cancelingTimers_.find(timer) == cancelingTimers_.end()) {
       // set the expiration_
       timer->Restart(now);
       // reinsert the timer to the timers_ and active_timers_ set
@@ -86,7 +88,7 @@ int createTimerfd() {
 }
 
 TimerQueue::TimerQueue(EventLoop *loop)
-    : loop_(loop), timerfd_(createTimerfd()), channel_(timerfd_, loop, true, false, false) {
+    : loop_(loop), timerfd_(createTimerfd()), channel_(timerfd_, loop, true, false, false, false) {
   channel_.SetReadCallback([this]() {
     TimeStamp now = TimeStamp::Now();
     // read the timerfd
@@ -99,9 +101,12 @@ TimerQueue::TimerQueue(EventLoop *loop)
     // get the expired timers
     auto expired = getExpired(now);
     // call the timer callbacks
+    is_doing_timer_callback_ = true;
+    cancelingTimers_.clear();
     for (auto &entry : expired) {
       entry.second->Run();
     }
+    is_doing_timer_callback_ = false;
     // reset the timers
     reset(expired, now);
   });
@@ -137,6 +142,11 @@ void TimerQueue::cancelTimer(const std::shared_ptr<Timer> &timer) {
     if (it != active_timers_.end()) {
       timers_.erase(Entry(timer->GetExpiration(), timer));
       active_timers_.erase(it);
+    } else if (is_doing_timer_callback_) {
+      cancelingTimers_.insert(timer);
+    } else {
+      // handle error
+      WarnIf(true, "TimerQueue::cancelTimer: timer not found && not doing timer's callback");
     }
   });
 }
