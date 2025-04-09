@@ -5,8 +5,8 @@
 
 #include <cassert>
 
-#include "base/Exception.h"
 #include "Timer.h"
+#include "base/Exception.h"
 #include "tcp/EventLoop.h"
 
 bool TimerQueue::insert(const std::shared_ptr<Timer> &timer) {

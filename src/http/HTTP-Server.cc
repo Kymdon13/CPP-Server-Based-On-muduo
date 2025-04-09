@@ -15,9 +15,7 @@
 
 #define CONNECTION_TIMEOUT 30.
 
-HTTPServer::HTTPServer(EventLoop* loop, const char *ip, const int port)
-  : loop_(loop)
- {
+HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
   tcp_server_ = std::make_unique<TCPServer>(loop, ip, port);
   /**
    * set TCPServer::on_connection_callback_
@@ -58,8 +56,8 @@ HTTPServer::HTTPServer(EventLoop* loop, const char *ip, const int port)
     getsockname(fd_clnt, (struct sockaddr *)&addr_local, &addrlength_local);
     std::cout << "tid-" << CurrentThread::gettid() << " Connection"
               << "[fd#" << fd_clnt << "]"
-              << " from " << inet_ntoa(addr_peer.sin_addr) << ":" << ntohs(addr_peer.sin_port)
-              << " to " << inet_ntoa(addr_local.sin_addr) << ":" << ntohs(addr_local.sin_port) << std::endl;
+              << " from " << inet_ntoa(addr_peer.sin_addr) << ":" << ntohs(addr_peer.sin_port) << " to "
+              << inet_ntoa(addr_local.sin_addr) << ":" << ntohs(addr_local.sin_port) << std::endl;
   });
 
   /**

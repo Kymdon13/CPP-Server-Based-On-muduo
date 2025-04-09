@@ -9,9 +9,7 @@
 size_t Buffer::Size() const { return buffer_.size(); }
 
 const char *Buffer::GetBuffer() const { return buffer_.c_str(); }
-void Buffer::SetBuffer(const char *str) {
-  buffer_ = std::string(str);
-}
+void Buffer::SetBuffer(const char *str) { buffer_ = std::string(str); }
 
 void Buffer::Append(const char *str, size_t size) {
   for (size_t i = 0; i < size; ++i) {

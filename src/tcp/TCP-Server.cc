@@ -7,19 +7,17 @@
 #include <sstream>
 #include <utility>
 
+#include "base/CurrentThread.h"
+#include "base/Exception.h"
 #include "tcp/Acceptor.h"
+#include "tcp/Channel.h"
 #include "tcp/EventLoop.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/ThreadPool.h"
-#include "tcp/Channel.h"
-#include "base/CurrentThread.h"
-#include "base/Exception.h"
 
 #define MAX_CONN_ID 1000
 
-TCPServer::TCPServer(EventLoop* loop, const char *ip, const int port)
-  : loop_(loop)
-{
+TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
   /**
    * init main reactor as Acceptor
    */

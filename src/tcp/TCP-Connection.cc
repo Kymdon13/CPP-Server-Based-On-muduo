@@ -9,10 +9,10 @@
 #include <string>
 #include <utility>
 
+#include "base/Exception.h"
 #include "tcp/Buffer.h"
 #include "tcp/Channel.h"
 #include "tcp/EventLoop.h"
-#include "base/Exception.h"
 
 #define BUFFER_SIZE 4096  // determine how many chars can be read into read_buffer_ at once
 
@@ -77,11 +77,10 @@ bool TCPConnection::write() {
 
 TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_id)
     : loop_(loop),
-    connection_fd_(connection_fd),
-    connection_id_(connection_id),
-    last_active_time_(TimeStamp::Now()),
-    timer_(nullptr)
-{
+      connection_fd_(connection_fd),
+      connection_id_(connection_id),
+      last_active_time_(TimeStamp::Now()),
+      timer_(nullptr) {
   if (nullptr == loop) {
     throw std::invalid_argument("EventLoop is nullptr.");
   }
@@ -165,7 +164,5 @@ Buffer *TCPConnection::GetWriteBuffer() { return write_buffer_.get(); }
 
 void TCPConnection::RefreshTimeStamp() { last_active_time_ = TimeStamp::Now(); }
 TimeStamp TCPConnection::GetLastActiveTime() const { return last_active_time_; }
-void TCPConnection::SetTimer(std::shared_ptr<Timer> timer) {
-  timer_ = std::move(timer);
-}
+void TCPConnection::SetTimer(std::shared_ptr<Timer> timer) { timer_ = std::move(timer); }
 std::shared_ptr<Timer> TCPConnection::GetTimer() const { return timer_; }

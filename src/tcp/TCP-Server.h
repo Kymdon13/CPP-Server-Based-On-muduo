@@ -30,7 +30,7 @@ class TCPServer {
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPServer);
-  TCPServer(EventLoop* loop, const char *ip, const int port);
+  TCPServer(EventLoop *loop, const char *ip, const int port);
   ~TCPServer() = default;
 
   void Start();

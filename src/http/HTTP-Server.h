@@ -25,7 +25,7 @@ class HTTPServer {
 
  public:
   DISABLE_COPYING_AND_MOVING(HTTPServer);
-  HTTPServer(EventLoop* loop, const char *ip, const int port);
+  HTTPServer(EventLoop *loop, const char *ip, const int port);
   ~HTTPServer();
 
   void OnMessage(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);

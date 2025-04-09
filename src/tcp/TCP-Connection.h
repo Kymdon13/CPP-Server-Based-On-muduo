@@ -7,12 +7,7 @@
 #include "base/cppserver-common.h"
 #include "timer/TimeStamp.h"
 
-enum class TCPState : uint8_t {
-  Invalid = 1,
-  Connected,
-  Disconnected,
-  Closing
-};
+enum class TCPState : uint8_t { Invalid = 1, Connected, Disconnected, Closing };
 
 class Timer;
 
