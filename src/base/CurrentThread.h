@@ -16,8 +16,8 @@ extern thread_local int t_formattedTidLength;
 
 inline int gettid() {
   if (unlikely(t_cachedTid == -1)) {
-    t_cachedTid = static_cast<pid_t>(syscall(SYS_gettid));
-    t_formattedTidLength = snprintf(t_formattedTid, sizeof(t_formattedTid), "[%5d]", t_cachedTid);
+    t_cachedTid = ::gettid();
+    t_formattedTidLength = snprintf(t_formattedTid, sizeof(t_formattedTid), "<%6d>", t_cachedTid);
   }
   return t_cachedTid;
 }

@@ -6,12 +6,15 @@
 
 #include "base/cppserver-common.h"
 
+// 4KB
 #define FIXED_BUFFER_SIZE 4096
+// 4MB
+#define FIXED_BUFFER_SIZE_BIG 4096 * 1024
 
-template <int SIZE>
+template <size_t SIZE>
 class FixedBuffer {
  private:
-  char data_[FIXED_BUFFER_SIZE];
+  char data_[SIZE];
   char *cur_ = data_;
 
   const char *end() const { return data_ + sizeof(data_); }

@@ -7,7 +7,7 @@
 #include "HTTP-Request.h"
 #include "HTTP-Response.h"
 #include "base/Exception.h"
-#include "base/Utils.h"
+#include "base/Util.h"
 #include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 
@@ -35,7 +35,7 @@ void HTTPConnection::EnableHTTPConnection() {
         HTTPRequest *req = http_context_->GetHTTPRequest();
         // check if client wish to keep the connection
         std::string conn_state = req->GetHeaderByKey("Connection");
-        bool is_clnt_want_to_close = (utils::toLower(conn_state) == "close");
+        bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
         // generate response
         HTTPResponse res(is_clnt_want_to_close);
         on_message_callback_(http_context_->GetHTTPRequest(), &res);
