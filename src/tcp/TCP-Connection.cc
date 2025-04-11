@@ -10,69 +10,57 @@
 #include <utility>
 
 #include "base/Exception.h"
+#include "log/Logger.h"
 #include "tcp/Buffer.h"
 #include "tcp/Channel.h"
 #include "tcp/EventLoop.h"
 
-#define BUFFER_SIZE 4096  // determine how many chars can be read into read_buffer_ at once
+#define BUFFER_SIZE 1024  // determine how many bytes can be read into read_buffer_ at once
 
-bool TCPConnection::readNonBlocking() {
+void TCPConnection::readNonBlocking() {
   char buf[BUFFER_SIZE];
   while (true) {
     memset(buf, 0, sizeof(buf));
     ssize_t bytes_read = ::read(connection_fd_, buf, sizeof(buf));
-    if (bytes_read > 0) {
-      read_buffer_->Append(buf, bytes_read);
+    if (bytes_read > 0) {  // read some bytes
+      read_buffer_.append(buf, bytes_read);
     } else if (bytes_read == -1) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // done reading in non-blocking socket
-        break;
-      }
       if (errno == EINTR) {  // interrupted by signal
         continue;
       }
-    } else if (bytes_read == 0) {  // peer closed connection
-      HandleClose();
-      return false;
-    } else {  // error
-      HandleClose();
-      return false;
-    }
-  }
-  return true;
-}
-bool TCPConnection::read() {
-  read_buffer_->Clear();
-  return readNonBlocking();
-}
-
-bool TCPConnection::writeNonBlocking() {
-  size_t write_buffer_size = write_buffer_->Size();
-  // create a temp buf of type 'char[]', cuz ::write() does not support string
-  char buf[write_buffer_size];
-  memcpy(buf, write_buffer_->GetBuffer(), write_buffer_size);
-  int data_size = write_buffer_size;
-  int data_left = write_buffer_size;
-  while (data_left > 0) {
-    ssize_t bytes_write = ::write(connection_fd_, buf + data_size - data_left, data_left);
-    if (bytes_write == -1) {
-      if (errno == EAGAIN) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // done reading in non-blocking socket
         break;
       }
-      if (errno == EINTR) {
-        continue;
-      }
-      // other situation is error
+    } else if (bytes_read == 0) {  // peer closed connection
+      LOG_TRACE << "TCPConnection::readNonBlocking peer closed connection";
       HandleClose();
-      return false;
+      return;
+    } else {  // error
+      LOG_ERROR << "TCPConnection::readNonBlocking error";
+      HandleClose();
+      return;
     }
-    data_left -= bytes_write;
   }
-  return true;
 }
-bool TCPConnection::write() {
-  bool closing = writeNonBlocking();
-  write_buffer_->Clear();
-  return closing;
+void TCPConnection::read() { readNonBlocking(); }
+
+ssize_t TCPConnection::writeNonBlocking() {
+  int left = write_buffer_.readableBytes();
+  ssize_t sent = ::write(connection_fd_, write_buffer_.peek(), left);
+  if (sent == -1) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {  // done writing in non-blocking socket
+      return 0;
+    }
+    if (errno == EINTR) {  // interrupted by signal
+      return 0;
+    }
+    // FIXME(wzy) there are other situations we have not list here
+    HandleClose();
+    return -1;
+  }
+  // move the writerIndex_ forward
+  write_buffer_.retrieve(sent);
+  return sent;
 }
 
 TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_id)
@@ -87,10 +75,13 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
 
   // create Channel
   channel_ = std::make_unique<Channel>(connection_fd, loop, true, false, true, true);  // Reading, ET by default
-  // set the Channel->read_callback_
+  /**
+   *  set the Channel->read_callback_
+   */
   channel_->SetReadCallback([this]() {
     RefreshTimeStamp();
-    if (!read()) {
+    read();
+    if (state_ == TCPState::Disconnected) {
       return;
     }
     // call on_message_callback_ if read() is successful
@@ -100,11 +91,24 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
       WarnIf(true, "on_message_callback_ callback is none");
     }
   });
+  /**
+   * * set the Channel->write_callback_
+   */
+  channel_->SetWriteCallback([this]() {
+    RefreshTimeStamp();
+    if (state_ == TCPState::Disconnected) {
+      LOG_ERROR << "TCPConnection::write_callback_ called while the TCPConnection::state_ == TCPState::Disconnected";
+      return;
+    }
+    ssize_t sent = writeNonBlocking();
+    if (sent == -1) {
+      LOG_ERROR << "TCPConnection::writeNonBlocking error";
+    } else if (sent == 0) {
+      // nothing to write
+      LOG_DEBUG << "TCPConnection::writeNonBlocking write nothing";
+    }
+  });
   // notice that we will call channel_->FlushEvent() in EnableConnection()
-
-  // create read buffer and write buffer
-  read_buffer_ = std::make_unique<Buffer>();
-  write_buffer_ = std::make_unique<Buffer>();
 }
 
 TCPConnection::~TCPConnection() { ::close(connection_fd_); }
@@ -129,16 +133,31 @@ void TCPConnection::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)
   on_message_callback_ = std::move(func);
 }
 
-void TCPConnection::SetWriteBuffer(const char *msg) { write_buffer_->SetBuffer(msg); }
-Buffer *TCPConnection::GetReadBuffer() { return read_buffer_.get(); }
-
-bool TCPConnection::Send(const std::string &msg) {
-  SetWriteBuffer(msg.c_str());
-  return write();
-}
-bool TCPConnection::Send(const char *msg) {
-  SetWriteBuffer(msg);
-  return write();
+void TCPConnection::Send(const std::string &msg) { Send(msg.c_str(), msg.size()); }
+void TCPConnection::Send(const char *msg, size_t len) {
+  int left = len;
+  if (state_ == TCPState::Disconnected) {
+    LOG_WARN << "TCPConnection::Send called while the TCPConnection::state_ == TCPState::Disconnected";
+    return;
+  }
+  if (!channel_->isWriting() && write_buffer_.readableBytes() == 0) {
+    ssize_t sent = ::write(connection_fd_, msg, len);
+    if (sent >= 0) {  // write some bytes
+      left -= sent;
+    } else {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // write buffer is full, write nothing
+        sent = 0;
+      } else {  // error
+        HandleClose();
+        return;
+      }
+    }
+    if (left > 0) {  // still have some bytes left in the msg
+      write_buffer_.append(msg + sent, left);
+      // let the Channel::write_callback_ to write the rest
+      channel_->enableWriting();
+    }
+  }
 }
 
 // EventLoop::pendingFunctors_
@@ -160,7 +179,6 @@ int TCPConnection::GetID() const { return connection_id_; }
 TCPState TCPConnection::GetConnectionState() const { return state_; }
 EventLoop *TCPConnection::GetEventLoop() const { return loop_; }
 Channel *TCPConnection::GetChannel() { return channel_.get(); }
-Buffer *TCPConnection::GetWriteBuffer() { return write_buffer_.get(); }
 
 void TCPConnection::RefreshTimeStamp() { last_active_time_ = TimeStamp::Now(); }
 TimeStamp TCPConnection::GetLastActiveTime() const { return last_active_time_; }

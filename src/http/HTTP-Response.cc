@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-std::string HTTPStatusToString(HTTPStatus stat) {
+std::string HTTPResponse::HTTPStatusToString(HTTPStatus stat) {
   switch (stat) {
     case HTTPStatus::Continue:
       return "Continue";
@@ -26,7 +26,7 @@ std::string HTTPStatusToString(HTTPStatus stat) {
   }
 }
 
-std::string HTTPContentTypeToString(HTTPContentType type) {
+std::string HTTPResponse::HTTPContentTypeToString(HTTPContentType type) {
   switch (type) {
     case HTTPContentType::text_plain:
       return "text/plain";
@@ -43,14 +43,7 @@ std::string HTTPContentTypeToString(HTTPContentType type) {
   }
 }
 
-HTTPResponse::HTTPResponse(bool close) : close_(close) {}
-
-HTTPResponse::~HTTPResponse() {}
-
-void HTTPResponse::SetStatus(HTTPStatus status) {
-  status_ = status;
-  status_string_ = std::to_string(static_cast<unsigned>(status)) + " " + HTTPStatusToString(status);
-}
+void HTTPResponse::SetStatus(HTTPStatus status) { status_ = status; }
 
 void HTTPResponse::SetContentType(HTTPContentType content_type) {
   AddHeader("Content-Type", HTTPContentTypeToString(content_type));
@@ -68,7 +61,7 @@ std::string HTTPResponse::GetResponse() {
   std::string msg;
 
   // request line
-  msg += "HTTP/1.1" + status_string_ + "\r\n";
+  msg += "HTTP/1.1" + std::to_string(static_cast<unsigned>(status_)) + ' ' + HTTPStatusToString(status_) + "\r\n";
 
   // add connection related header
   if (close_) {

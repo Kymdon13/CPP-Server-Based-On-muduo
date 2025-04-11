@@ -17,7 +17,7 @@ void HTTPRequest::SetVersion(const std::string &ver) {
     version_ = HTTPVersion::Invalid;
   }
 }
-HTTPVersion HTTPRequest::GetVersion() const { return version_; }
+HTTPRequest::HTTPVersion HTTPRequest::GetVersion() const { return version_; }
 std::string HTTPRequest::GetVersionString() const {
   switch (version_) {
     case HTTPVersion::HTTP11:
@@ -44,7 +44,7 @@ bool HTTPRequest::SetMethod(const std::string &method) {
   }
   return method_ != HTTPMethod::Invalid;  // return false if Invalid
 }
-HTTPMethod HTTPRequest::GetMethod() const { return method_; }
+HTTPRequest::HTTPMethod HTTPRequest::GetMethod() const { return method_; }
 std::string HTTPRequest::GetMethodString() const {
   switch (method_) {
     case HTTPMethod::GET:

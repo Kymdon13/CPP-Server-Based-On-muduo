@@ -9,11 +9,10 @@
 #include "HTTP-Connection.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
-#include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
 
-#define CONNECTION_TIMEOUT 30.
+#define CONNECTION_TIMEOUT 900.
 
 HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
   tcp_server_ = std::make_unique<TCPServer>(loop, ip, port);

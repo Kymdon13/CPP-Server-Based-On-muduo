@@ -6,35 +6,31 @@
 
 #include "HTTP-Request.h"
 
-enum class HTTPStatus : unsigned {
-  Continue = 100,
-  OK = 200,
-  BadRequest = 400,
-  Forbidden = 403,
-  NotFound = 404,
-  InternalServerError = 500,
-  NotImplemented = 501,
-  HTTPVersionNotSupported = 505
-};
-
-std::string HTTPStatusToString(HTTPStatus stat);
-
-enum class HTTPContentType : unsigned short { text_plain, text_html, text_css, text_javascript, image_jpeg };
-
-std::string HTTPContentTypeToString(HTTPContentType type);
-
 class HTTPResponse {
+ public:
+  enum class HTTPStatus : unsigned {
+    Continue = 100,
+    OK = 200,
+    BadRequest = 400,
+    Forbidden = 403,
+    NotFound = 404,
+    InternalServerError = 500,
+    NotImplemented = 501,
+    HTTPVersionNotSupported = 505
+  };
+
+  enum class HTTPContentType : uint8_t { text_plain, text_html, text_css, text_javascript, image_jpeg };
+
  private:
-  HTTPVersion version_{HTTPVersion::Invalid};
+  bool close_;
+  HTTPRequest::HTTPVersion version_{HTTPRequest::HTTPVersion::Invalid};
   HTTPStatus status_{HTTPStatus::InternalServerError};
-  std::string status_string_;  // status_string_ = status code + status message
   std::unordered_map<std::string, std::string> headers_;
   std::string body_;
-  bool close_;
 
  public:
-  HTTPResponse(bool close);
-  ~HTTPResponse();
+  HTTPResponse(bool close, HTTPStatus status = HTTPStatus::OK) : close_(close), status_(status) {}
+  ~HTTPResponse() {}
 
   void SetStatus(HTTPStatus status);
   void SetContentType(HTTPContentType content_type);
@@ -45,4 +41,7 @@ class HTTPResponse {
   void SetClose(bool close);
 
   std::string GetResponse();
+
+  static std::string HTTPStatusToString(HTTPStatus stat);
+  static std::string HTTPContentTypeToString(HTTPContentType type);
 };

@@ -24,7 +24,7 @@ void defaultOutput(const char *msg, int len) {
 
 void defaultFlush() { fflush(stdout); }
 
-Logger::LogLevel g_logLevel = Logger::LogLevel::INFO;
+Logger::LogLevel g_logLevel = Logger::LogLevel::TRACE;
 // output to stdout by default
 Logger::OutputFunc g_output = defaultOutput;
 Logger::FlushFunc g_flushBeforeAbort = defaultFlush;
@@ -48,7 +48,7 @@ void Logger::Wrapper::formatTime() {
     memcpy(t_time, time_str.c_str(), time_str.size());
   }
   // 1. time info
-  stream_ << '[' << t_time << "] ";
+  stream_ << t_time << ' ';
 }
 
 Logger::Logger(SourceFile file, int line) : wrapper_(LogLevel::INFO, file, line) {}

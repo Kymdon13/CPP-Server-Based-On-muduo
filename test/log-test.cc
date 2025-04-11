@@ -30,7 +30,7 @@ int main() {
   /**
    * SourceFile
    */
-  SourceFile file(__FILE__);
+  Logger::SourceFile file(__FILE__);
   std::cout << file.filename_ << std::endl;
   std::cout << __FILE__ << std::endl;
 
@@ -43,7 +43,7 @@ int main() {
   /**
    * Logger
    */
-  Logger::setLogLevel(LogLevel::TRACE);
+  Logger::setLogLevel(Logger::LogLevel::TRACE);
   LOG_TRACE << "hello world";
   LOG_DEBUG << "hello world";
   LOG_INFO << "hello world";

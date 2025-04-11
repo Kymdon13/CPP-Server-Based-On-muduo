@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "HTTP-Context.h"
 #include "base/cppserver-common.h"
 
 class TCPConnection;
@@ -11,10 +12,17 @@ class HTTPRequest;
 class HTTPResponse;
 
 class HTTPConnection {
+public:
+
  private:
+  bool parseUnfinished_{false};
+  std::unique_ptr<HTTPContext::parsingSnapshot> snapshot_;
+
   std::shared_ptr<TCPConnection> tcp_connection_;
   std::unique_ptr<HTTPContext> http_context_;
   std::function<void(const HTTPRequest *, HTTPResponse *)> on_message_callback_;
+
+  bool completeCallback(const std::shared_ptr<TCPConnection> &conn);
 
  public:
   DISABLE_COPYING_AND_MOVING(HTTPConnection);

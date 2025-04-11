@@ -4,8 +4,73 @@
 
 #include "http/HTTP-Context.h"
 #include "http/HTTP-Request.h"
+#include "http/HTTP-Response.h"
+
+HTTPResponse::HTTPStatus parse_http_request(const std::string &http_request) {
+  HTTPContext *context = new HTTPContext();
+
+  HTTPContext::HTTPRequestParseState state = context->ParseRequest(http_request.c_str(), http_request.size());
+
+  if (state == HTTPContext::HTTPRequestParseState::COMPLETE) {
+    std::cout << "Complete" << std::endl;
+  } else {
+    std::cout << "InComplete" << std::endl;
+  }
+
+  std::cout << "...................." << std::endl;
+
+  HTTPRequest *request = context->GetHTTPRequest();
+
+  std::cout << "method: " << request->GetMethodString() << std::endl << std::endl;
+  std::cout << "url: " << request->GetUrl() << std::endl;
+  std::cout << "request_params: " << std::endl;
+  for (auto it : request->GetRequestParams()) {
+    std::cout << "key: " << it.first << " | "
+              << "value: " << it.second << std::endl;
+  }
+  std::cout << "protocol: " << request->GetProtocol() << std::endl << std::endl;
+  std::cout << "version: " << request->GetVersionString() << std::endl << std::endl;
+  std::cout << "headers: " << std::endl;
+  for (auto it : request->GetHeaders()) {
+    std::cout << "key: " << it.first << " | "
+              << "value: " << it.second << std::endl;
+  }
+  std::cout << std::endl;
+  std::cout << "body: " << request->GetBody() << std::endl;
+
+  delete context;
+  context = nullptr;
+
+  switch (state) {
+    case HTTPContext::HTTPRequestParseState::COMPLETE:
+      return HTTPResponse::HTTPStatus::OK;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID_METHOD:
+      return HTTPResponse::HTTPStatus::NotImplemented;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID_URL:
+      return HTTPResponse::HTTPStatus::NotFound;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID_PROTOCOL:
+      return HTTPResponse::HTTPStatus::HTTPVersionNotSupported;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID_HEADER:
+      return HTTPResponse::HTTPStatus::Forbidden;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID_CRLF:
+      return HTTPResponse::HTTPStatus::BadRequest;
+      break;
+    case HTTPContext::HTTPRequestParseState::INVALID:
+      return HTTPResponse::HTTPStatus::Continue;  // for testing
+      break;
+    default:
+      return HTTPResponse::HTTPStatus::InternalServerError;
+      break;
+  }
+}
 
 int main() {
+  std::string res;
   std::string http_request =
       "GET /hello?a=2&b=456  HTTP/1.1\r\n"
       "Host: 127.0.0.1:1234\r\n"
@@ -33,40 +98,30 @@ int main() {
       "Content-Length: 100\r\n"
       "\r\n"
       "zxcqp\r\nafjsdlkfjalskdjflaksdnflaskdnkclnasldca^%123jaklsncas*&*@&#07123hjnsd";
-
   std::cout << "http_request.size(): " << http_request.size() << std::endl;
-  std::cout << "====================" << std::endl;
+  res = HTTPResponse::HTTPStatusToString(parse_http_request(http_request));
+  std::cout << "--------------------" << std::endl;
+  std::cout << res << std::endl;
+  std::cout << "============================================================" << std::endl;
 
-  HTTPContext *context = new HTTPContext();
-  HTTPRequestParseState state = context->ParseRequest(http_request.c_str(), http_request.size());
-  if (state == HTTPRequestParseState::COMPLETE) {
-    std::cout << "Complete" << std::endl;
-  } else {
-    std::cout << "InComplete" << std::endl;
-  }
-  std::cout << "====================" << std::endl;
-  HTTPRequest *request = context->GetHTTPRequest();
+  http_request = "GET /index.html?param=value&key=invalid param HTTP/1.1\r\nHost: example.com\r\n\r\n";
+  std::cout << "http_request.size(): " << http_request.size() << std::endl;
+  res = HTTPResponse::HTTPStatusToString(parse_http_request(http_request));
+  std::cout << "--------------------" << std::endl;
+  std::cout << res << std::endl;
+  std::cout << "============================================================" << std::endl;
 
-  std::cout << "method: " << request->GetMethodString() << std::endl << std::endl;
+  http_request = "GET /index.html HTTP/1.1\r\nInvalid Header Key: some\r\n\r\n";
+  std::cout << "http_request.size(): " << http_request.size() << std::endl;
+  res = HTTPResponse::HTTPStatusToString(parse_http_request(http_request));
+  std::cout << "--------------------" << std::endl;
+  std::cout << res << std::endl;
+  std::cout << "============================================================" << std::endl;
 
-  std::cout << "url: " << request->GetUrl() << std::endl;
-  std::cout << "request_params: " << std::endl;
-  for (auto it : request->GetRequestParams()) {
-    std::cout << "key: " << it.first << " | "
-              << "value: " << it.second << std::endl;
-  }
-
-  std::cout << "protocol: " << request->GetProtocol() << std::endl << std::endl;
-
-  std::cout << "version: " << request->GetVersionString() << std::endl << std::endl;
-
-  std::cout << "headers: " << std::endl;
-  for (auto it : request->GetHeaders()) {
-    std::cout << "key: " << it.first << " | "
-              << "value: " << it.second << std::endl;
-  }
-
-  std::cout << std::endl;
-
-  std::cout << "body: " << request->GetBody() << std::endl;
+  http_request = "GET /index.html HTTP/1.1\r\nHeader: some\nsome\r\n\r\n";
+  std::cout << "http_request.size(): " << http_request.size() << std::endl;
+  res = HTTPResponse::HTTPStatusToString(parse_http_request(http_request));
+  std::cout << "--------------------" << std::endl;
+  std::cout << res << std::endl;
+  std::cout << "============================================================" << std::endl;
 }

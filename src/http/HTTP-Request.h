@@ -3,35 +3,34 @@
 #include <string>
 #include <unordered_map>
 
-enum class HTTPMethod : unsigned char { Invalid = 0, GET, HEAD, POST };
-
-inline std::string HTTPMethodToString(HTTPMethod method) {
-  switch (method) {
-    case HTTPMethod::GET:
-      return "GET";
-    case HTTPMethod::HEAD:
-      return "HEAD";
-    case HTTPMethod::POST:
-      return "POST";
-    default:
-      return "Invalid";
-  }
-}
-
-enum class HTTPVersion : unsigned char { Invalid = 0, HTTP10, HTTP11 };
-
-static std::string HTTPVersionToString(HTTPVersion ver) {
-  switch (ver) {
-    case HTTPVersion::HTTP11:
-      return "HTTP/1.1";
-    case HTTPVersion::HTTP10:
-      return "HTTP/1.0";
-    default:
-      return "Invalid";
-  }
-}
-
 class HTTPRequest {
+ public:
+  enum class HTTPMethod : unsigned char { Invalid = 0, GET, HEAD, POST };
+  inline std::string methodToString(HTTPMethod method) {
+    switch (method) {
+      case HTTPMethod::GET:
+        return "GET";
+      case HTTPMethod::HEAD:
+        return "HEAD";
+      case HTTPMethod::POST:
+        return "POST";
+      default:
+        return "Invalid";
+    }
+  }
+
+  enum class HTTPVersion : unsigned char { Invalid = 0, HTTP10, HTTP11 };
+  inline std::string versionToString(HTTPVersion ver) {
+    switch (ver) {
+      case HTTPVersion::HTTP11:
+        return "HTTP/1.1";
+      case HTTPVersion::HTTP10:
+        return "HTTP/1.0";
+      default:
+        return "Invalid";
+    }
+  }
+
  public:
   HTTPRequest();
   ~HTTPRequest();
