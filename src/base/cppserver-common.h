@@ -1,15 +1,5 @@
 #pragma once
 
-// For headers no need to include every other headers
-class TCPServer;
-class EventLoop;
-class Poller;
-class Acceptor;
-class TCPConnection;
-class Channel;
-class Buffer;
-class ThreadPool;
-
 // Macros to disable copying and moving semantics
 #define DISABLE_COPYING(cls) \
   cls(const cls &) = delete; \

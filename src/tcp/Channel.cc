@@ -74,20 +74,20 @@ void Channel::HandleEvent() const {
   }
 }
 
-void Channel::EnableReading() {
+void Channel::enableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, true);
   FlushEvent();
 }
-void Channel::DisableReading() {
+void Channel::disableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, false);
   FlushEvent();
 }
 
-void Channel::EnableWriting() {
+void Channel::enableWriting() {
   updateEvent(EPOLLOUT, true);
   FlushEvent();
 }
-void Channel::DisableWriting() {
+void Channel::disableWriting() {
   updateEvent(EPOLLOUT, false);
   FlushEvent();
 }

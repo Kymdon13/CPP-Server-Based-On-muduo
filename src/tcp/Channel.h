@@ -5,6 +5,9 @@
 
 #include "base/cppserver-common.h"
 
+class EventLoop;
+class TCPConnection;
+
 class Channel {
  private:
   int fd_;
@@ -34,11 +37,17 @@ class Channel {
 
   void HandleEvent() const;
 
-  void EnableReading();
-  void DisableReading();
+  void enableReading();
+  void disableReading();
+  bool isReading() const {
+    return listen_event_ & (EPOLLIN | EPOLLPRI);
+  }
 
-  void EnableWriting();
-  void DisableWriting();
+  void enableWriting();
+  void disableWriting();
+  bool isWriting() const {
+    return listen_event_ & EPOLLOUT;
+  }
 
   void DisableAll();
 

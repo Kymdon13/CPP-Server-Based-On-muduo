@@ -11,6 +11,7 @@ class Poller;
 class Timer;
 class TimeStamp;
 class TimerQueue;
+class Channel;
 
 class EventLoop {
  private:

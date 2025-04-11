@@ -9,7 +9,6 @@
 #include "HTTP-Connection.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
-#include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
 

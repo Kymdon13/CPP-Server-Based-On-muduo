@@ -7,6 +7,8 @@
 
 #include "base/cppserver-common.h"
 
+class Channel;
+
 class Poller {
  private:
   int epfd_;

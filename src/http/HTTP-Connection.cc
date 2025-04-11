@@ -8,7 +8,6 @@
 #include "HTTP-Response.h"
 #include "base/Exception.h"
 #include "base/Util.h"
-#include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 
 HTTPConnection::HTTPConnection(const std::shared_ptr<TCPConnection> &conn) {
@@ -40,7 +39,8 @@ void HTTPConnection::EnableHTTPConnection() {
         HTTPResponse res(is_clnt_want_to_close);
         on_message_callback_(http_context_->GetHTTPRequest(), &res);
         // send message
-        if (!conn->Send(res.GetResponse().c_str())) {
+        conn->Send(res.GetResponse().c_str());
+        if (conn->GetConnectionState() == TCPState::Disconnected) {
           break;
         }
         // if the client wish to close connection
@@ -53,7 +53,8 @@ void HTTPConnection::EnableHTTPConnection() {
       }
       case HTTPRequestParseState::INVALID: {
         WarnIf(true, "HTTPRequest Parsed failed");
-        if (!conn->Send(HTTPResponse(true).GetResponse())) {
+        conn->Send(HTTPResponse(true).GetResponse());
+        if (conn->GetConnectionState() == TCPState::Disconnected) {
           break;
         }
         conn->HandleClose();
@@ -61,7 +62,8 @@ void HTTPConnection::EnableHTTPConnection() {
       }
       // TODO(wzy) other Invalid state to be handle
       default: {
-        if (!conn->Send(HTTPResponse(true).GetResponse())) {
+        conn->Send(HTTPResponse(true).GetResponse());
+        if (conn->GetConnectionState() == TCPState::Disconnected) {
           break;
         }
         conn->HandleClose();

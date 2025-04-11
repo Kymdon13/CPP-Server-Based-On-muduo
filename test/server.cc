@@ -13,7 +13,6 @@
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 #include "http/HTTP-Server.h"
-#include "tcp/Buffer.h"
 #include "tcp/EventLoop.h"
 #include "tcp/Poller.h"
 #include "tcp/TCP-Connection.h"
