@@ -9,50 +9,50 @@
 class HTTPRequest;
 
 class HTTPContext {
-  public:
-enum class HTTPRequestParseState : uint8_t {
-  INVALID = 0,
-  INVALID_METHOD,
-  INVALID_URL,
-  INVALID_PROTOCOL,
-  INVALID_HEADER,
-  INVALID_CRLF,
-  COMPLETE,
+ public:
+  enum class HTTPRequestParseState : uint8_t {
+    INVALID = 0,
+    INVALID_METHOD,
+    INVALID_URL,
+    INVALID_PROTOCOL,
+    INVALID_HEADER,
+    INVALID_CRLF,
+    COMPLETE,
 
-  START,   // start parsing
-  METHOD,  // request method
+    START,   // start parsing
+    METHOD,  // request method
 
-  BEFORE_URL,  // report INVALID_URL if not start with '/'
-  URL,
+    BEFORE_URL,  // report INVALID_URL if not start with '/'
+    URL,
 
-  BEFORE_URL_PARAM_KEY,  // make sure there is at least one char after '?'
-  URL_PARAM_KEY,
-  BEFORE_URL_PARAM_VALUE,  // make sure there is at least one char after '='
-  URL_PARAM_VALUE,
+    BEFORE_URL_PARAM_KEY,  // make sure there is at least one char after '?'
+    URL_PARAM_KEY,
+    BEFORE_URL_PARAM_VALUE,  // make sure there is at least one char after '='
+    URL_PARAM_VALUE,
 
-  BEFORE_PROTOCOL,  // report INVALID_PROTOCOL if not start with uppercase
-  PROTOCOL,
+    BEFORE_PROTOCOL,  // report INVALID_PROTOCOL if not start with uppercase
+    PROTOCOL,
 
-  BEFORE_VERSION,  // make sure there is at least one char after 'HTTP/'
-  VERSION,
+    BEFORE_VERSION,  // make sure there is at least one char after 'HTTP/'
+    VERSION,
 
-  HEADER,
-  HEADER_KEY,
-  BEFORE_HEADER_VALUE,
-  HEADER_VALUE,
+    HEADER,
+    HEADER_KEY,
+    BEFORE_HEADER_VALUE,
+    HEADER_VALUE,
 
-  ENCOUNTER_CR,  // encounter a CR
-  CR_LF,         // if next char is CR then it's BODY which follows, otherwise it's header
-  CR_LF_CR,      // encounter CR after CR_LF
+    ENCOUNTER_CR,  // encounter a CR
+    CR_LF,         // if next char is CR then it's BODY which follows, otherwise it's header
+    CR_LF_CR,      // encounter CR after CR_LF
 
-  BODY
-};
+    BODY
+  };
 
-struct parsingSnapshot {
-  std::string last_req__;
-  HTTPContext::HTTPRequestParseState parsingState__;
-  long colon__;
-};
+  struct parsingSnapshot {
+    std::string last_req__;
+    HTTPContext::HTTPRequestParseState parsingState__;
+    long colon__;
+  };
 
  private:
   std::unique_ptr<HTTPRequest> http_request_;

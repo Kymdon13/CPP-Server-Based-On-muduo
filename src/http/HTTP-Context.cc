@@ -82,18 +82,19 @@ bool isInvalidHeaderKeyChar(const char &c) {
   }
 }
 
-HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, size_t size, parsingSnapshot *snapshot) {
+HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, size_t size,
+                                                             parsingSnapshot *snapshot) {
   const char *start, *cur, *end, *colon;
   std::string combined_request;
   if (snapshot && snapshot->parsingState__ <= HTTPRequestParseState::COMPLETE) {  // not completed
     combined_request = snapshot->last_req__ + std::string(begin, size);
-    start = combined_request.c_str();  // point to left border
+    start = combined_request.c_str();           // point to left border
     cur = start + snapshot->last_req__.size();  // point to beginning of the next request
     end = start + combined_request.size();
     colon = start + snapshot->colon__;  // restore the position of colon
   } else {
     start = begin;  // point to left border
-    cur = start;  // point to right border
+    cur = start;    // point to right border
     end = start + size;
     colon = start;  // store the position of ':' if encounter 'url:params' or 'headerkey:headervalue'
   }

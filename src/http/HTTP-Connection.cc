@@ -47,7 +47,8 @@ void HTTPConnection::EnableHTTPConnection() {
     }
     using HTTPRequestParseState = HTTPContext::HTTPRequestParseState;
     HTTPRequestParseState return_state;
-    return_state = http_context_->ParseRequest(conn->readBuffer()->peek(), conn->readBuffer()->readableBytes(), snapshot_.get());
+    return_state =
+        http_context_->ParseRequest(conn->readBuffer()->peek(), conn->readBuffer()->readableBytes(), snapshot_.get());
     conn->readBuffer()->retrieveAll();
     switch (return_state) {
       case HTTPRequestParseState::COMPLETE: {

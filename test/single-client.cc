@@ -182,6 +182,4 @@ void http_client_header() {
   close(sockfd);
 }
 
-int main() {
-  http_client_header();
-}
+int main() { http_client_header(); }

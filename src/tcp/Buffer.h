@@ -81,20 +81,27 @@ class Buffer {
   // shrink
   void shrink() { buffer_.shrink_to_fit(); }
 
- private:
+ protected:
   /// @brief return char* to the beginning of the buffer
   char *begin() { return &*buffer_.begin(); }
   const char *begin() const { return &*buffer_.begin(); }
 
   /// @brief expand LEN bytes of space in the buffer
   void makeSpace(size_t len) {
-    if (len > writableBytes()) {
+    if (writableBytes() + prependableBytes() < len + CheapPrepend) {
       buffer_.resize(writerIndex_ + len);
+    } else {
+      size_t readable = readableBytes();
+      std::copy(begin() + readerIndex_, begin() + writerIndex_, begin() + CheapPrepend);
+      readerIndex_ = CheapPrepend;
+      writerIndex_ = readerIndex_ + readable;
     }
   }
 
- private:
+ protected:
   std::vector<char> buffer_;
   size_t readerIndex_;
   size_t writerIndex_;
 };
+
+

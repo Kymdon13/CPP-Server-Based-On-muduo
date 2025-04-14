@@ -12,8 +12,7 @@ class HTTPRequest;
 class HTTPResponse;
 
 class HTTPConnection {
-public:
-
+ public:
  private:
   bool parseUnfinished_{false};
   std::unique_ptr<HTTPContext::parsingSnapshot> snapshot_;

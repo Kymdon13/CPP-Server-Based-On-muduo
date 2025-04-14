@@ -13,13 +13,13 @@
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 #include "http/HTTP-Server.h"
+#include "log/AsyncLogging.h"
 #include "tcp/EventLoop.h"
 #include "tcp/Poller.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
 #include "tcp/Thread.h"
 #include "tcp/ThreadPool.h"
-#include "log/AsyncLogging.h"
 
 const std::string html = " <font color=\"red\">This is html!</font> ";
 
