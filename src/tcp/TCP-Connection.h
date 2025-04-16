@@ -28,6 +28,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   std::unique_ptr<Channel> channel_;
 
   Buffer read_buffer_;
+  // store data that TCPConnection::Send hasn't sent
   Buffer write_buffer_;
 
   std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
@@ -42,7 +43,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
 
   /// @brief write asyncronously
   /// @return 0 if write nothing, -1 if error, >0 if write success
-  ssize_t writeNonBlocking();
+  int writeNonBlocking();
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPConnection);

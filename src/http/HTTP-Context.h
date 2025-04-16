@@ -19,6 +19,8 @@ class HTTPContext {
     INVALID_CRLF,
     COMPLETE,
 
+    INIT,  // if in this state, then we have no history request need to remember, after parse complete we will reset the state to INIT
+
     START,   // start parsing
     METHOD,  // request method
 
@@ -50,7 +52,7 @@ class HTTPContext {
 
   struct parsingSnapshot {
     std::string last_req__;
-    HTTPContext::HTTPRequestParseState parsingState__;
+    HTTPContext::HTTPRequestParseState parsingState__ = HTTPRequestParseState::INIT;
     long colon__;
   };
 

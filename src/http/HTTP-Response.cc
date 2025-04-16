@@ -1,7 +1,15 @@
 #include "HTTP-Response.h"
 
+#include <memory>
 #include <string>
 #include <utility>
+
+#include <tcp/Buffer.h>
+
+std::string g_staticPath = "/home/wzy/code/cpp-server/static/";
+
+std::string HTTPResponse::GetStaticPath() { return g_staticPath; }
+void HTTPResponse::SetStaticPath(const std::string &path) { g_staticPath = path; }
 
 std::string HTTPResponse::HTTPStatusToString(HTTPStatus stat) {
   switch (stat) {
@@ -29,56 +37,55 @@ std::string HTTPResponse::HTTPStatusToString(HTTPStatus stat) {
 std::string HTTPResponse::HTTPContentTypeToString(HTTPContentType type) {
   switch (type) {
     case HTTPContentType::text_plain:
-      return "text/plain";
+      return "text/plain; charset=utf-8";
     case HTTPContentType::text_html:
-      return "text/html";
+      return "text/html; charset=utf-8";
     case HTTPContentType::text_css:
-      return "text/css";
+      return "text/css; charset=utf-8";
     case HTTPContentType::text_javascript:
-      return "text/javascript";
+      return "text/javascript; charset=utf-8";
     case HTTPContentType::image_jpeg:
       return "image/jpeg";
     default:
-      return "text/plain";
+      return "text/plain; charset=utf-8";
   }
 }
 
-void HTTPResponse::SetStatus(HTTPStatus status) { status_ = status; }
+// HTTP/1.1 204 No Content
+// Server: nginx
+// Date: Tue, 15 Apr 2025 12:45:39 GMT
+// Connection: keep-alive
+// Access-Control-Allow-Credentials: true
+// Access-Control-Allow-Origin: https://platform.moonshot.cn
+// Vary: Origin
+// Request-Context: appId=cid-v1:e97341f6-8fff-46a6-9229-fbbfe0892c78
+std::shared_ptr<Buffer> HTTPResponse::GetResponse() {
+  std::string before_body;
 
-void HTTPResponse::SetContentType(HTTPContentType content_type) {
-  AddHeader("Content-Type", HTTPContentTypeToString(content_type));
-}
-
-void HTTPResponse::AddHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
-
-void HTTPResponse::SetBody(std::string body) { body_ = std::move(body); }
-
-bool HTTPResponse::IsClose() { return close_; }
-
-void HTTPResponse::SetClose(bool close) { close_ = close; }
-
-std::string HTTPResponse::GetResponse() {
-  std::string msg;
-
-  // request line
-  msg += "HTTP/1.1" + std::to_string(static_cast<unsigned>(status_)) + ' ' + HTTPStatusToString(status_) + "\r\n";
+  // response line
+  before_body += std::string("HTTP/1.1") + ' ' + std::to_string(static_cast<unsigned>(status_)) + ' ' +
+                 HTTPStatusToString(status_) + "\r\n";
 
   // add connection related header
   if (close_) {
-    msg += "Connection: close\r\n";
+    before_body += "Connection: close\r\n";
   } else {
-    msg += "Connection: keep-alive\r\n";
+    before_body += "Connection: keep-alive\r\n";
   }
 
   // add other headers
-  msg += "Content-Length: " + std::to_string(body_.size()) + "\r\n";
+  before_body += "Content-Length: " + std::to_string(body_->readableBytes()) + "\r\n";
   for (const auto &header : headers_) {
-    msg += header.first + ": " + header.second + "\r\n";
+    before_body += header.first + ": " + header.second + "\r\n";
   }
 
-  // add body
-  msg += "\r\n";
-  msg += body_;
+  before_body += "\r\n";
 
-  return msg;
+  // construct response and add body
+  res_ = std::make_shared<Buffer>(before_body.size() + body_->readableBytes() + 2);  // +2 for \r\n
+  res_->append(before_body.c_str(), before_body.size());
+  res_->append(body_->peek(), body_->readableBytes());
+  res_->append("\r\n", 2);
+
+  return res_;
 }

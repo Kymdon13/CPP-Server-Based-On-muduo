@@ -23,7 +23,7 @@ class ThreadPool {
   DISABLE_COPYING_AND_MOVING(ThreadPool);
   /// @brief create a ThreadPool
   /// @param n_threads how many threads you want to create in the ThreadPool
-  explicit ThreadPool(int n_threads);
+  explicit ThreadPool(EventLoop *loop, int n_threads);
   ~ThreadPool();
 
   void Init();

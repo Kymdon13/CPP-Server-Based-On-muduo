@@ -19,16 +19,16 @@ class HTTPServer {
  private:
   EventLoop *loop_;
   std::unique_ptr<TCPServer> tcp_server_;
-  std::function<void(const HTTPRequest *, HTTPResponse *)> on_message_callback_;
+  std::function<void(const HTTPRequest *, HTTPResponse *)> on_response_callback_;
 
-  std::unordered_map<int, std::unique_ptr<HTTPConnection>> http_connection_map_;
+  std::unordered_map<int, std::shared_ptr<HTTPConnection>> http_connection_map_;
 
  public:
   DISABLE_COPYING_AND_MOVING(HTTPServer);
   HTTPServer(EventLoop *loop, const char *ip, const int port);
   ~HTTPServer();
 
-  void OnMessage(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
+  void OnResponse(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
 
   void Start();
 };

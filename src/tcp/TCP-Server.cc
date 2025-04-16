@@ -9,6 +9,7 @@
 
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
+#include "log/Logger.h"
 #include "tcp/Acceptor.h"
 #include "tcp/Channel.h"
 #include "tcp/EventLoop.h"
@@ -30,7 +31,7 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
    */
   acceptor_->OnNewConnection([this](int fd) {
     if (fd == -1) {
-      WarnIf(true, "Acceptor::on_new_connection_callback_(): fd == -1");
+      LOG_ERROR << "TCPServer::TCPServer, fd == -1";
       return;
     }
     // create TCPConnection (!!!note that TCPConnection must be held by a shared_ptr to enable the shared_from_this()
@@ -51,14 +52,12 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
         int fd = conn->GetFD();
         auto it = connection_map_.find(fd);
         if (it == connection_map_.end()) {
-          std::stringstream ss;
-          ss << "Connection::on_close_callback_(): can not find fd: " << fd << " in connection_map_";
-          WarnIf(true, ss.str().c_str());
+          LOG_ERROR << "TCPServer::TCPServer, can not find fd: \"" << fd << "\" in connection_map_";
           return;
         }
         connection_map_.erase(fd);
         // remove the channel from the system epoll
-        conn->GetChannel()->Remove();
+        conn->GetChannel()->removeSelf();
       });
     });
     /**
@@ -80,14 +79,15 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
    * create ThreadPool
    */
   unsigned int hardware_concurrency =
-      std::thread::hardware_concurrency() - 1;  // minus 1 cuz the main_reactor_ has taken one thread
-  thread_pool_ = std::make_unique<ThreadPool>(hardware_concurrency);
+      std::thread::hardware_concurrency() - 2;  // leave 2 threads for main reactor and AsyncLogging
+  thread_pool_ = std::make_unique<ThreadPool>(loop_, hardware_concurrency);
 }
 
 void TCPServer::Start() {
   // dispatch the sub reactors to the threads
   thread_pool_->Init();
   // start looping
+  std::cout << "[main thread] - EventLoop start looping..." << std::endl;
   loop_->Loop();
 }
 

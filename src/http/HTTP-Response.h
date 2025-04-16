@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "HTTP-Request.h"
+#include "tcp/Buffer.h"
 
 class HTTPResponse {
  public:
@@ -26,22 +28,31 @@ class HTTPResponse {
   HTTPRequest::HTTPVersion version_{HTTPRequest::HTTPVersion::Invalid};
   HTTPStatus status_{HTTPStatus::InternalServerError};
   std::unordered_map<std::string, std::string> headers_;
-  std::string body_;
+  // we use string to store the header
+  // body_ = response body
+  std::shared_ptr<Buffer> body_;
+  // res_ = response line + headers + body
+  std::shared_ptr<Buffer> res_;
 
  public:
-  HTTPResponse(bool close, HTTPStatus status = HTTPStatus::OK) : close_(close), status_(status) {}
+  HTTPResponse(bool close, HTTPStatus status = HTTPStatus::OK)
+      : close_(close), status_(status), body_(nullptr), res_(nullptr) {}
   ~HTTPResponse() {}
 
-  void SetStatus(HTTPStatus status);
-  void SetContentType(HTTPContentType content_type);
-  void AddHeader(const std::string &key, const std::string &value);
-  void SetBody(std::string body);
+  void SetStatus(HTTPStatus status) { status_ = status; }
+  void SetContentType(HTTPContentType content_type) {
+    AddHeader("Content-Type", HTTPContentTypeToString(content_type));
+  }
+  void AddHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
+  void SetBody(std::shared_ptr<Buffer> body) { body_ = body; }
+  bool IsClose() { return close_; }
+  void SetClose(bool close) { close_ = close; }
 
-  bool IsClose();
-  void SetClose(bool close);
-
-  std::string GetResponse();
+  static std::string GetStaticPath();
+  static void SetStaticPath(const std::string &path);
 
   static std::string HTTPStatusToString(HTTPStatus stat);
   static std::string HTTPContentTypeToString(HTTPContentType type);
+
+  std::shared_ptr<Buffer> GetResponse();
 };

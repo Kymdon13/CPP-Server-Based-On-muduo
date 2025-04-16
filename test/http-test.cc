@@ -72,7 +72,7 @@ HTTPResponse::HTTPStatus parse_http_request(const std::string &http_request) {
 int main() {
   std::string res;
   std::string http_request =
-      "GET /hello?a=2&b=456  HTTP/1.1\r\n"
+      "GET /hello?a=2&b=456 HTTP/1.1\r\n"
       "Host: 127.0.0.1:1234\r\n"
       "Connection: keep-alive\r\n"
       "Cache-Control: max-age=0\r\n"

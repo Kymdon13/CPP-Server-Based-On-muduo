@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 class Buffer {
  public:
   static const size_t CheapPrepend = 8;
@@ -71,6 +73,15 @@ class Buffer {
     writerIndex_ += len;
   }
 
+  // move the writerIndex_ forward
+  void hasWritten(size_t len) {
+    if (len > writableBytes()) {
+      std::cerr << "Buffer::hasWritten, len > writableBytes()" << std::endl;
+    } else {
+      writerIndex_ += len;
+    }
+  }
+
   // prepend
   void prepend(const void * /*restrict*/ data, size_t len) {
     readerIndex_ -= len;
@@ -104,4 +115,89 @@ class Buffer {
   size_t writerIndex_;
 };
 
+// template <typename T>
+// class readspan {
+//   std::span<T> sp;
+//   size_t start_ = 0;  // logic start point
+//   size_t len_ = 0;
+//   size_t lenOfBuffer_ = 0;  // length of buffer
 
+//  public:
+//   readspan(std::span<T> sequence, size_t start, size_t len, size_t lenOfBuffer)
+//       : sp(sequence), start_(start), len_(len), lenOfBuffer_(lenOfBuffer) {}
+
+//   T &operator[](size_t index) { return sp[(index + start_) % lenOfBuffer_]; }
+
+//   size_t size() const { return len_; }
+// };
+
+// class CycleBuffer {
+//  public:
+//   explicit CycleBuffer(size_t initSize = 1024) : buffer_(initSize), readerIndex_(0), writerIndex_(0) {}
+
+//   readspan<char> peek() { return readspan<char>(span<char>(buffer_), readerIndex_, readableBytes(), buffer_.size());
+//   }
+
+//   size_t readableBytes() {
+//     return writerIndex_ > readerIndex_ ? (writerIndex_ - readerIndex_) : (buffer_.size() + writerIndex_ -
+//     readerIndex_);
+//   }
+//   size_t writableBytes() {
+//     return readerIndex_ > writerIndex_ ? (readerIndex_ - writerIndex_) : (buffer_.size() + readerIndex_ -
+//     writerIndex_);
+//   }
+
+//   void retrieve(size_t len) {
+//     if (len < readableBytes()) {
+//       readerIndex_ = (readerIndex_ + len) % buffer_.size();
+//     } else {
+//       retrieveAll();
+//     }
+//   }
+//   void retrieveAll() {
+//     readerIndex_ = 0;
+//     writerIndex_ = 0;
+//   }
+
+//   void append(const char * /*restrict*/ data, size_t len) {
+//     ensureWritableBytes(len);
+//     if (writerIndex_ + len > buffer_.size()) {
+//       size_t firstHalf = buffer_.size() - writerIndex_;
+//       std::copy(data, data + firstHalf, begin() + writerIndex_);
+//       std::copy(data, data + len - firstHalf, begin());
+//     } else {
+//       std::copy(data, data + len, begin() + writerIndex_);
+//     }
+//     writerIndex_ = (writerIndex_ + len) % buffer_.size();
+//   }
+
+//   void ensureWritableBytes(size_t len) {
+//     if (writableBytes() < len) {
+//       makeSpace(len);
+//     }
+//   }
+
+//   void makeSpace(size_t len) {
+//     size_t originSize = buffer_.size();
+//     std::cout << "originSize: " << originSize << std::endl;
+//     size_t readableToRightBorder = buffer_.size() - readerIndex_;
+//     buffer_.resize(buffer_.size() + len);
+//     if (writerIndex_ > readerIndex_) {
+//       return;
+//     } else {
+//       std::cout << "copy: " << buffer_.size() << std::endl;
+//       std::copy_backward(begin() + readerIndex_, begin() + originSize, end());
+//     }
+//   }
+
+//  protected:
+//   char *begin() { return &*buffer_.begin(); }
+//   const char *begin() const { return &*buffer_.begin(); }
+//   char *end() { return &*buffer_.end(); }
+//   const char *end() const { return &*buffer_.end(); }
+
+//  protected:
+//   std::vector<char> buffer_;
+//   size_t readerIndex_;
+//   size_t writerIndex_;
+// };

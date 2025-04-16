@@ -44,9 +44,8 @@ void TCPConnection::readNonBlocking() {
 }
 void TCPConnection::read() { readNonBlocking(); }
 
-ssize_t TCPConnection::writeNonBlocking() {
-  int left = write_buffer_.readableBytes();
-  ssize_t sent = ::write(connection_fd_, write_buffer_.peek(), left);
+int TCPConnection::writeNonBlocking() {
+  ssize_t sent = ::write(connection_fd_, write_buffer_.peek(), write_buffer_.readableBytes());
   if (sent == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {  // done writing in non-blocking socket
       return 0;
@@ -54,13 +53,12 @@ ssize_t TCPConnection::writeNonBlocking() {
     if (errno == EINTR) {  // interrupted by signal
       return 0;
     }
-    // FIXME(wzy) there are other situations we have not list here
     HandleClose();
     return -1;
   }
   // move the writerIndex_ forward
   write_buffer_.retrieve(sent);
-  return sent;
+  return 1;
 }
 
 TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_id)
@@ -88,7 +86,7 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
     if (on_message_callback_) {
       on_message_callback_(shared_from_this());
     } else {
-      WarnIf(true, "on_message_callback_ callback is none");
+      LOG_WARN << "on_message_callback_ callback is none";
     }
   });
   /**
@@ -100,12 +98,16 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
       LOG_ERROR << "TCPConnection::write_callback_ called while the TCPConnection::state_ == TCPState::Disconnected";
       return;
     }
-    ssize_t sent = writeNonBlocking();
-    if (sent == -1) {
+    ssize_t flag = writeNonBlocking();
+    if (flag == -1) {
       LOG_ERROR << "TCPConnection::writeNonBlocking error";
-    } else if (sent == 0) {
+    } else if (flag == 0) {
       // nothing to write
       LOG_DEBUG << "TCPConnection::writeNonBlocking write nothing";
+    }
+    // disable writing if there is no data left in the write_buffer_
+    if (write_buffer_.readableBytes() == 0) {
+      channel_->disableWriting();
     }
   });
   // notice that we will call channel_->FlushEvent() in EnableConnection()
@@ -116,11 +118,11 @@ TCPConnection::~TCPConnection() { ::close(connection_fd_); }
 void TCPConnection::EnableConnection() {
   state_ = TCPState::Connected;
   channel_->SetTCPConnectionPtr(shared_from_this());
-  // use epoll_ctl(EPOLL_CTL_ADD) to really start listening on events
-  channel_->FlushEvent();
   if (on_connection_callback_) {
     on_connection_callback_(shared_from_this());
   }
+  // use epoll_ctl(EPOLL_CTL_ADD) to really start listening on events
+  channel_->FlushEvent();
 }
 
 void TCPConnection::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
@@ -140,12 +142,13 @@ void TCPConnection::Send(const char *msg, size_t len) {
     LOG_WARN << "TCPConnection::Send called while the TCPConnection::state_ == TCPState::Disconnected";
     return;
   }
+  // if channel is not writing, means we have data left in the last write
   if (!channel_->isWriting() && write_buffer_.readableBytes() == 0) {
     ssize_t sent = ::write(connection_fd_, msg, len);
-    if (sent >= 0) {  // write some bytes
+    if (sent >= 0) {  // written some bytes
       left -= sent;
     } else {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // write buffer is full, write nothing
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // the tcp write buffer is full, write nothing
         sent = 0;
       } else {  // error
         HandleClose();
@@ -163,14 +166,14 @@ void TCPConnection::Send(const char *msg, size_t len) {
 // EventLoop::pendingFunctors_
 void TCPConnection::HandleClose() {
   if (state_ == TCPState::Disconnected) {
-    WarnIf(true, "HandleClose called while the TCPConnection::state_ == TCPState::Disconnected");
+    LOG_WARN << "TCPConnection::HandleClose, HandleClose called while TCPConnection::state_ == TCPState::Disconnected";
     return;
   }
   state_ = TCPState::Disconnected;
   if (on_close_callback_) {
     on_close_callback_(shared_from_this());
   } else {
-    WarnIf(true, "HandleClose is registered while on_close_callback_ callback is not");
+    LOG_ERROR << "TCPConnection::HandleClose, on_close_callback_ is nullptr";
   }
 }
 

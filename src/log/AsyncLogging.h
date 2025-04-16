@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <iostream>
 
 #include "LogStream.h"
 #include "Logger.h"
@@ -50,6 +51,7 @@ class AsyncLogging {
     thread_ = std::thread(&AsyncLogging::threadFunc, this);
     // wait for the thread to be ready
     latch_.wait();
+    std::cout << "[logging thread] - AsyncLogging ready to go..." << std::endl;
   }
   void stop() {
     running_ = false;

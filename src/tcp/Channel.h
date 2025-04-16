@@ -53,7 +53,7 @@ class Channel {
 
   int GetFD() const;
 
-  void Remove();
+  void removeSelf();
 
   event_t GetListenEvent() const;
   event_t GetReadyEvent() const;

@@ -7,6 +7,7 @@
 
 #include "EventLoop.h"
 #include "base/Exception.h"
+#include "log/Logger.h"
 
 void Channel::updateEvent(event_t event, bool enable) {
   if (enable) {
@@ -53,7 +54,7 @@ void Channel::HandleEvent() const {
     // TODO(wzy) there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
     // Channel, we must find a way to detect whether the caller is an Acceptor
     if (!use_count_lock) {  // if failed to promote the weak_ptr to shared_ptr
-      WarnIf(true, "Channel::HandleEvent() failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue");
+      LOG_ERROR << "Channel::HandleEvent, failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue";
       return;
     }
   }
@@ -61,14 +62,14 @@ void Channel::HandleEvent() const {
     if (read_callback_) {
       read_callback_();
     } else {
-      WarnIf(true, "register EPOLLIN but no read_callback_ is registered");
+      LOG_WARN << "EPOLLIN registered but no read_callback_ is registered";
     }
   }
   if (ready_event_ & EPOLLOUT) {
     if (write_callback_) {
       write_callback_();
     } else {
-      WarnIf(true, "register EPOLLOUT but no write_callback_ is registered");
+      LOG_WARN << "EPOLLOUT registered but no write_callback_ is registered";
     }
   }
 }
@@ -99,7 +100,7 @@ void Channel::DisableAll() {
 
 int Channel::GetFD() const { return fd_; }
 
-void Channel::Remove() {
+void Channel::removeSelf() {
   if (fd_ != -1) {
     loop_->DeleteChannel(this);
     ::close(fd_);

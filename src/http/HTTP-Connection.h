@@ -19,7 +19,7 @@ class HTTPConnection {
 
   std::shared_ptr<TCPConnection> tcp_connection_;
   std::unique_ptr<HTTPContext> http_context_;
-  std::function<void(const HTTPRequest *, HTTPResponse *)> on_message_callback_;
+  std::function<void(const HTTPRequest *, HTTPResponse *)> on_response_callback_;
 
   bool completeCallback(const std::shared_ptr<TCPConnection> &conn);
 
@@ -28,7 +28,7 @@ class HTTPConnection {
   HTTPConnection(const std::shared_ptr<TCPConnection> &conn);
   ~HTTPConnection();
 
-  void OnMessage(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
+  void OnResponse(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
 
   // directly set the on_message_callback_ of TCPConnection, so we can have more customizability,
   // and that TCPConnection::EnableConnection executes after Acceptor::OnNewConnection,

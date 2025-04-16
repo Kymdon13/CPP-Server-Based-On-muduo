@@ -7,6 +7,7 @@
 
 #include "Timer.h"
 #include "base/Exception.h"
+#include "log/Logger.h"
 #include "tcp/EventLoop.h"
 
 bool TimerQueue::insert(const std::shared_ptr<Timer> &timer) {
@@ -117,7 +118,7 @@ TimerQueue::TimerQueue(EventLoop *loop)
 TimerQueue::~TimerQueue() {
   // remove the channel
   channel_.DisableAll();
-  channel_.Remove();
+  channel_.removeSelf();
   // close the timerfd
   ::close(timerfd_);
 }
@@ -146,7 +147,7 @@ void TimerQueue::cancelTimer(const std::shared_ptr<Timer> &timer) {
       cancelingTimers_.insert(timer);
     } else {
       // handle error
-      WarnIf(true, "TimerQueue::cancelTimer: timer not found && not doing timer's callback");
+      LOG_ERROR << "TimerQueue::cancelTimer: timer not found && not doing timer's callback";
     }
   });
 }

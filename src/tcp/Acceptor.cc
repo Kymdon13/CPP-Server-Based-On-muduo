@@ -14,6 +14,7 @@
 #include "Channel.h"
 #include "EventLoop.h"
 #include "base/Exception.h"
+#include "log/Logger.h"
 #include "tcp/TCP-Connection.h"
 
 Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), listen_fd_(-1) {
@@ -26,7 +27,7 @@ Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), lis
   channel_->SetReadCallback([this]() {
     // check if the listen_fd_ is invalid
     if (-1 == listen_fd_) {
-      WarnIf(true, "Acceptor::listen_fd_ not valid");
+      LOG_SYSERR << "Acceptor::Acceptor, listen_fd_ invalid";
       return;
     }
     // init the addr struct
@@ -35,7 +36,7 @@ Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), lis
     // accept the connection
     int fd_client =
         ::accept4(listen_fd_, (struct sockaddr *)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
-    WarnIf(-1 == fd_client, "accept4 failed");
+    if (-1 == fd_client) LOG_SYSERR << "Acceptor::Acceptor, accept4 failed";
     // call on_new_connection_callback_
     on_new_connection_callback_(fd_client);
   });
@@ -49,12 +50,15 @@ Acceptor::~Acceptor() {
 
 void Acceptor::Create() {
   if (-1 != listen_fd_) {
-    WarnIf(true, "Acceptor already created");
+    LOG_WARN << "Acceptor::Create, Acceptor already created";
     return;
   }
   listen_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);  // listening socket should be blocking I/O
 
-  WarnIf(-1 == listen_fd_, "Acceptor::Create failed");
+  if (-1 == listen_fd_) {
+    LOG_SYSERR << "Acceptor::Create, socket failed";
+    return;
+  }
 
   // set the SO_REUSEADDR
   int optval = 1;
@@ -67,15 +71,20 @@ void Acceptor::Bind(const char *ip, int port) {
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(ip);
   addr.sin_port = htons(port);
-  ErrorIf(-1 == ::bind(listen_fd_, (struct sockaddr *)&addr, sizeof(addr)), "Acceptor::Bind failed");
+  if (-1 == ::bind(listen_fd_, (struct sockaddr *)&addr, sizeof(addr))) {
+    LOG_SYSERR << "Acceptor::Bind, bind failed";
+    return;
+  }
 }
 
 void Acceptor::Listen() {
   if (-1 == listen_fd_) {
-    WarnIf(true, "Acceptor::listen_fd_ not valid");
+    LOG_ERROR << "Acceptor::Listen, listen_fd_ invalid";
     return;
   }
-  WarnIf(-1 == ::listen(listen_fd_, SOMAXCONN), "Acceptor::Listen failed");
+  if (-1 == ::listen(listen_fd_, SOMAXCONN)) {
+    LOG_SYSERR << "Acceptor::Listen, socket listened failed";
+  }
 }
 
 void Acceptor::OnNewConnection(std::function<void(int)> cb) { on_new_connection_callback_ = std::move(cb); }

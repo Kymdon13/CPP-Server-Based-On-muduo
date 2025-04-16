@@ -14,6 +14,7 @@
 #include "Poller.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
+#include "log/Logger.h"
 #include "timer/Timer.h"
 #include "timer/TimerQueue.h"
 
@@ -32,7 +33,9 @@ void EventLoop::doPendingFunctors() {
 void EventLoop::wake() {
   uint64_t val = 1;
   ssize_t bytes_write = ::write(wakeup_fd_, &val, sizeof(val));
-  WarnIf(bytes_write != sizeof(val), "EventLoop::wake: bytes_write != sizeof(val)");
+  if (bytes_write != sizeof(val)) {
+    LOG_ERROR << "EventLoop::wake, bytes_write != sizeof(val)";
+  }
 }
 
 EventLoop::EventLoop()
@@ -47,7 +50,9 @@ EventLoop::EventLoop()
   wakeup_channel_->SetReadCallback([this]() {
     uint64_t val;
     ssize_t bytes_read = ::read(wakeup_fd_, &val, sizeof(val));
-    WarnIf(bytes_read != sizeof(val), "EventLoop::on_eventfd_: bytes_read != sizeof(val)");
+    if (bytes_read != sizeof(val)) {
+      LOG_ERROR << "EventLoop::EventLoop, bytes_read != sizeof(val)";
+    }
   });
   wakeup_channel_->FlushEvent();
 }

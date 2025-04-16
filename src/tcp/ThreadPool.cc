@@ -1,7 +1,7 @@
 #include "ThreadPool.h"
 #include "Thread.h"
 
-ThreadPool::ThreadPool(int n_threads) : n_threads_(n_threads) {}
+ThreadPool::ThreadPool(EventLoop *loop, int n_threads) : main_reactor_(loop), n_threads_(n_threads) {}
 
 ThreadPool::~ThreadPool() {}
 

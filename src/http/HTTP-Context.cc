@@ -86,7 +86,7 @@ HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, 
                                                              parsingSnapshot *snapshot) {
   const char *start, *cur, *end, *colon;
   std::string combined_request;
-  if (snapshot && snapshot->parsingState__ <= HTTPRequestParseState::COMPLETE) {  // not completed
+  if (snapshot->parsingState__ > HTTPRequestParseState::INIT) {  // not completed
     combined_request = snapshot->last_req__ + std::string(begin, size);
     start = combined_request.c_str();           // point to left border
     cur = start + snapshot->last_req__.size();  // point to beginning of the next request

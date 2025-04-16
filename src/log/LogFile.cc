@@ -68,7 +68,7 @@ LogFile::LogFile(const std::string &dir, size_t rollSize, int checkEveryN, time_
 //     }
 // }
 
-// remove lastFlush_
+// new append, remove lastFlush_
 void LogFile::append(const char *logline, int len) {
   // write to the buffer
   file_->append(logline, len);

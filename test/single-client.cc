@@ -110,7 +110,7 @@ void http_client_header() {
   ErrorIf(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
 
   std::string http_request =
-      "GET /hello?a=2&b=456 HTTP/1.1\r\n"
+      "GET /cat.jpg HTTP/1.1\r\n"
       "Host: 127.0.0.1:1234\r\n"
       "Connection: keep-alive\r\n"
       "Cache-Control: max-age=0\r\n"

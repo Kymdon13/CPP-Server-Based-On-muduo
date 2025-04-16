@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "base/CurrentThread.h"
-#include "base/Exception.h"
+#include "base/FileUtil.h"
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 #include "http/HTTP-Server.h"
@@ -21,31 +21,31 @@
 #include "tcp/Thread.h"
 #include "tcp/ThreadPool.h"
 
-const std::string html = " <font color=\"red\">This is html!</font> ";
-
 void HTTPResponseCallback(const HTTPRequest *req, HTTPResponse *res) {
-  if (req->GetMethod() != HTTPRequest::HTTPMethod::GET) {
-    res->SetStatus(HTTPResponse::HTTPStatus::BadRequest);
-    res->SetClose(true);
-    return;
-  }
   std::string url = req->GetUrl();
-  if (url == "/") {
-    res->SetStatus(HTTPResponse::HTTPStatus::OK);
-    res->SetContentType(HTTPResponse::HTTPContentType::text_html);
-    res->SetBody(html);
-  } else if (url == "/hello") {
-    res->SetStatus(HTTPResponse::HTTPStatus::OK);
-    res->SetContentType(HTTPResponse::HTTPContentType::text_plain);
-    res->SetBody("hello world\n");
-  } else if (url == "/favicon.ico") {
-    res->SetStatus(HTTPResponse::HTTPStatus::OK);
+  LOG_TRACE << "HTTP request: " << '"' << url << '"';
+  if (req->GetMethod() == HTTPRequest::HTTPMethod::GET) {
+    if (url == "/") {
+      res->SetStatus(HTTPResponse::HTTPStatus::OK);
+      res->SetContentType(HTTPResponse::HTTPContentType::text_html);
+      res->SetBody(FileUtil::ReadFile(HTTPResponse::GetStaticPath() + "index.html").data());
+    } else if (url == "/cat") {
+      res->SetStatus(HTTPResponse::HTTPStatus::OK);
+      res->SetContentType(HTTPResponse::HTTPContentType::text_html);
+      res->SetBody(FileUtil::ReadFile(HTTPResponse::GetStaticPath() + "cat.html").data());
+    } else if (url == "/cat.jpg") {
+      res->SetStatus(HTTPResponse::HTTPStatus::OK);
+      res->SetContentType(HTTPResponse::HTTPContentType::image_jpeg);
+      res->SetBody(FileUtil::ReadFile(HTTPResponse::GetStaticPath() + "cat.jpg", true).data());
+    } else {
+      res->SetStatus(HTTPResponse::HTTPStatus::NotFound);
+      res->SetClose(true);
+    }
+  } else if (req->GetMethod() == HTTPRequest::HTTPMethod::POST) {
   } else {
-    res->SetStatus(HTTPResponse::HTTPStatus::NotFound);
-    res->SetBody("Sorry Not Found\n");
+    res->SetStatus(HTTPResponse::HTTPStatus::NotImplemented);
     res->SetClose(true);
   }
-  return;
 }
 
 int main() {
@@ -54,7 +54,7 @@ int main() {
 
   EventLoop *loop = new EventLoop();
   HTTPServer *server = new HTTPServer(loop, "0.0.0.0", 5000);
-  server->OnMessage(HTTPResponseCallback);
+  server->OnResponse(HTTPResponseCallback);
   server->Start();
 
   delete server;
