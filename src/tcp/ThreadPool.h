@@ -5,17 +5,17 @@
 #include <vector>
 
 #include "EventLoop.h"
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class Thread;
 
 class ThreadPool {
  private:
-  std::unique_ptr<EventLoop> main_reactor_;
+  std::unique_ptr<EventLoop> mainReactor_;
 
   std::vector<std::unique_ptr<Thread>> threads_;
   size_t n_threads_;
-  size_t which_sub_reactor_{0};
+  size_t whichSubReactor_{0};
 
   std::vector<std::shared_ptr<EventLoop>> loops_;
 
@@ -26,9 +26,9 @@ class ThreadPool {
   explicit ThreadPool(EventLoop *loop, int n_threads);
   ~ThreadPool();
 
-  void Init();
+  void init();
 
   /// @brief the main caller TCPConnection::TCPConnection() will not participate in the life management of EventLoop, so
   /// we return EventLoop* instead of shared_ptr<EventLoop>
-  EventLoop *GetSubReactor();
+  EventLoop *getSubReactor();
 };

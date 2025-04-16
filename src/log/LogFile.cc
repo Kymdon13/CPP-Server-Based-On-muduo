@@ -10,7 +10,7 @@ std::string LogFile::getLogFileName(TimeStamp &now) {
   filename.reserve(307);  // 15 + 1 + 255 + 32 + 4
 
   // time info
-  filename += now.ToFormattedString("%4d%02d%02d-%02d%02d%02d");  // 15 bytes
+  filename += now.formattedString("%4d%02d%02d-%02d%02d%02d");  // 15 bytes
 
   filename += '.';  // 1 byte
 
@@ -34,10 +34,10 @@ LogFile::LogFile(const std::string &dir, size_t rollSize, int checkEveryN, time_
       periodStartingPoint_(0),
       period_(period) {
   // create log file
-  TimeStamp now = TimeStamp::Now();
+  TimeStamp now = TimeStamp::now();
   rollFile(now);
   // now it has been properly initialized
-  periodStartingPoint_ = now.GetSecond() / period_ * period_;
+  periodStartingPoint_ = now.getSecond() / period_ * period_;
 }
 
 // // original code
@@ -46,15 +46,15 @@ LogFile::LogFile(const std::string &dir, size_t rollSize, int checkEveryN, time_
 //     file_->append(logline, len);
 
 //     if (file_->writtenBytes() > rollSize_) {
-//         TimeStamp now = TimeStamp::Now();
+//         TimeStamp now = TimeStamp::now();
 //         rollFile(now);
 //     } else {
 //         ++count_;
 //         // after checkEveryN_ times of writing
 //         if (count_ >= checkEveryN_) {
 //             count_ = 0;
-//             TimeStamp now = TimeStamp::Now();
-//             time_t nowInSecond = now.GetSecond();
+//             TimeStamp now = TimeStamp::now();
+//             time_t nowInSecond = now.getSecond();
 //             // check if it is different periods
 //             time_t thisPeriod = nowInSecond / period_ * period_;
 //             if (thisPeriod != periodStartingPoint_) {
@@ -74,7 +74,7 @@ void LogFile::append(const char *logline, int len) {
   file_->append(logline, len);
 
   if (file_->writtenBytes() > rollSize_) {
-    TimeStamp now = TimeStamp::Now();
+    TimeStamp now = TimeStamp::now();
     rollFile(now);
   } else {
     // since we hand over the flush to AsyncLogging, so we don't need to flush in LogFile,
@@ -83,8 +83,8 @@ void LogFile::append(const char *logline, int len) {
     // after checkEveryN_ times of writing
     if (count_ >= checkEveryN_) {
       count_ = 0;
-      TimeStamp now = TimeStamp::Now();
-      time_t nowInSecond = now.GetSecond();
+      TimeStamp now = TimeStamp::now();
+      time_t nowInSecond = now.getSecond();
       // check if it is different periods
       time_t thisPeriod = nowInSecond / period_ * period_;
       if (thisPeriod != periodStartingPoint_) {
@@ -100,7 +100,7 @@ void LogFile::append(const char *logline, int len) {
 // void LogFile::flush() { file_->flush(); }
 
 // void LogFile::rollFile(TimeStamp& now) {
-//     time_t nowInSecond = now.GetSecond();
+//     time_t nowInSecond = now.getSecond();
 //     // if the current timestamp is greater than lastRoll_
 //     if (nowInSecond > lastRoll_) {
 //         lastRoll_ = nowInSecond;
@@ -112,7 +112,7 @@ void LogFile::append(const char *logline, int len) {
 
 // // remove lastFlush_
 void LogFile::rollFile(TimeStamp &now) {
-  time_t nowInSecond = now.GetSecond();
+  time_t nowInSecond = now.getSecond();
   // if the current timestamp is greater than lastRoll_
   if (nowInSecond > lastRoll_) {
     lastRoll_ = nowInSecond;

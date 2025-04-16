@@ -5,7 +5,7 @@
 #include <mutex>
 #include <thread>
 
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class EventLoop;
 
@@ -21,5 +21,5 @@ class Thread {
   Thread();
   ~Thread();
 
-  std::shared_ptr<EventLoop> StartLoop();
+  std::shared_ptr<EventLoop> startLoop();
 };

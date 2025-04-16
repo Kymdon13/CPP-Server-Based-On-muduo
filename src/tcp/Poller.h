@@ -5,13 +5,13 @@
 #include <memory>
 #include <vector>
 
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class Channel;
 
 class Poller {
  private:
-  int epfd_;
+  int epollfd_;
   std::unique_ptr<epoll_event[]> events_{nullptr};
 
  public:
@@ -21,6 +21,6 @@ class Poller {
 
   std::vector<Channel *> Poll(int timeout = -1) const;
 
-  void UpdateChannel(Channel *channel) const;
-  void DeleteChannel(Channel *channel) const;
+  void updateChannel(Channel *channel) const;
+  void deleteChannel(Channel *channel) const;
 };

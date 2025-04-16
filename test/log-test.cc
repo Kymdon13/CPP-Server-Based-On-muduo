@@ -34,9 +34,9 @@ int main() {
   std::cout << file.filename_ << std::endl;
   std::cout << __FILE__ << std::endl;
 
-  TimeStamp time = TimeStamp::Now();
+  TimeStamp time = TimeStamp::now();
   char time_buf[64] = {0};
-  std::string time_str = time.ToFormattedString();
+  std::string time_str = time.formattedString();
   memcpy(time_buf, time_str.c_str(), time_str.size());
   std::cout << strlen(time_buf) << "|" << time_buf << std::endl;
 

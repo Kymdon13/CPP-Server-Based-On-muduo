@@ -5,26 +5,26 @@
 
 class HTTPRequest {
  public:
-  enum class HTTPMethod : unsigned char { Invalid = 0, GET, HEAD, POST };
-  inline std::string methodToString(HTTPMethod method) {
+  enum class Method : uint8_t { Invalid = 0, GET, HEAD, POST };
+  inline std::string methodToString(Method method) {
     switch (method) {
-      case HTTPMethod::GET:
+      case Method::GET:
         return "GET";
-      case HTTPMethod::HEAD:
+      case Method::HEAD:
         return "HEAD";
-      case HTTPMethod::POST:
+      case Method::POST:
         return "POST";
       default:
         return "Invalid";
     }
   }
 
-  enum class HTTPVersion : unsigned char { Invalid = 0, HTTP10, HTTP11 };
-  inline std::string versionToString(HTTPVersion ver) {
+  enum class Version : uint8_t { Invalid = 0, HTTP10, HTTP11 };
+  inline std::string versionToString(Version ver) {
     switch (ver) {
-      case HTTPVersion::HTTP11:
+      case Version::HTTP11:
         return "HTTP/1.1";
-      case HTTPVersion::HTTP10:
+      case Version::HTTP10:
         return "HTTP/1.0";
       default:
         return "Invalid";
@@ -35,37 +35,38 @@ class HTTPRequest {
   HTTPRequest();
   ~HTTPRequest();
 
-  void SetVersion(const std::string &version);
-  HTTPVersion GetVersion() const;
-  std::string GetVersionString() const;
+  void setVersion(const std::string &version);
+  Version version() const;
+  std::string versionAsString() const;
 
-  bool SetMethod(const std::string &method);
-  HTTPMethod GetMethod() const;
-  std::string GetMethodString() const;
+  bool setMethod(const std::string &method);
+  Method method() const;
+  std::string methodAsString() const;
 
-  void SetUrl(std::string url);
-  const std::string &GetUrl() const;
+  void setUrl(std::string url);
+  const std::string &url() const;
 
-  void SetRequestParams(const std::string &key, const std::string &value);
-  std::string GetRequestValueByKey(const std::string &key) const;
-  const std::unordered_map<std::string, std::string> &GetRequestParams() const;
+  void addParam(const std::string &key, const std::string &value);
+  std::string getParamByKey(const std::string &key) const;
+  // return the raw map of <key, value> of request params
+  const std::unordered_map<std::string, std::string> &params() const;
 
-  void SetProtocol(std::string protocol);
-  const std::string &GetProtocol() const;
+  void setProtocol(std::string protocol);
+  const std::string &protocol() const;
 
-  void AddHeader(const std::string &field, const std::string &value);
-  std::string GetHeaderByKey(const std::string &field) const;
-  const std::unordered_map<std::string, std::string> &GetHeaders() const;
+  void addHeader(const std::string &field, const std::string &value);
+  std::string getHeaderByKey(const std::string &field) const;
+  const std::unordered_map<std::string, std::string> &headers() const;
 
-  void SetBody(std::string body);
-  const std::string &GetBody() const;
+  void setBody(std::string body);
+  const std::string &body() const;
 
  private:
-  HTTPMethod method_{HTTPMethod::Invalid};
+  Method method_{Method::Invalid};
   std::string url_;
-  HTTPVersion version_{HTTPVersion::Invalid};
+  Version version_{Version::Invalid};
   std::string protocol_;
+  std::unordered_map<std::string, std::string> params_;
   std::unordered_map<std::string, std::string> headers_;
-  std::unordered_map<std::string, std::string> request_params_;
   std::string body_;
 };

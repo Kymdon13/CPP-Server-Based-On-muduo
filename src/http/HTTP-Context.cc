@@ -9,18 +9,18 @@
 #include "log/Logger.h"
 
 HTTPContext::HTTPContext()
-    : content_length_(0),
-      state_(HTTPRequestParseState::START),
-      http_request_(std::make_unique<HTTPRequest>()),
+    : contentLength_(0),
+      state_(ParseState::START),
+      request_(std::make_unique<HTTPRequest>()),
       snapshot_(std::make_unique<ParsingSnapshot>()) {}
 
 HTTPContext::~HTTPContext(){};
 
-void HTTPContext::ResetState() { state_ = HTTPRequestParseState::START; }
+void HTTPContext::resetState() { state_ = ParseState::START; }
 
-bool HTTPContext::IsComplete() { return state_ == HTTPRequestParseState::COMPLETE; }
+bool HTTPContext::isComplete() { return state_ == ParseState::COMPLETE; }
 
-HTTPRequest *HTTPContext::GetHTTPRequest() { return http_request_.get(); }
+HTTPRequest *HTTPContext::getRequest() { return request_.get(); }
 
 bool isInvalidURLChar(const char &c) {
   // control characters
@@ -84,13 +84,13 @@ bool isInvalidHeaderKeyChar(const char &c) {
   }
 }
 
-HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, size_t size) {
+HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size) {
   const char *start, *cur, *end, *colon;
   std::string combined_request;
-  if (snapshot_->parsingState__ > HTTPRequestParseState::INIT) {  // not completed
-    combined_request = snapshot_->last_req__ + std::string(begin, size);
+  if (snapshot_->parseState__ > ParseState::INIT) {  // not completed
+    combined_request = snapshot_->lastRequest__ + std::string(begin, size);
     start = combined_request.c_str();            // point to left border
-    cur = start + snapshot_->last_req__.size();  // point to beginning of the next request
+    cur = start + snapshot_->lastRequest__.size();  // point to beginning of the next request
     end = start + combined_request.size();
     colon = start + snapshot_->colon__;  // restore the position of colon
   } else {
@@ -99,177 +99,177 @@ HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, 
     end = start + size;
     colon = start;  // store the position of ':' if encounter 'url:params' or 'headerkey:headervalue'
   }
-  while (state_ > HTTPRequestParseState::COMPLETE && cur < end) {
+  while (state_ > ParseState::COMPLETE && cur < end) {
     char c = *cur;  // get current char
     switch (state_) {
-      case HTTPRequestParseState::START: {
+      case ParseState::START: {
         if (isblank(c) || c == CR || c == LF) {  // skip with space, CR or LF
           break;
         }
         if (isupper(c)) {  // uppercase may be METHOD
-          state_ = HTTPRequestParseState::METHOD;
+          state_ = ParseState::METHOD;
           start = cur;
         } else {
-          state_ = HTTPRequestParseState::INVALID_METHOD;  // method must be uppercase
+          state_ = ParseState::INVALID_METHOD;  // method must be uppercase
         }
         break;
       }
-      case HTTPRequestParseState::METHOD: {
+      case ParseState::METHOD: {
         if (isupper(c)) {  // we are still in the METHOD
           break;
         }
         if (isblank(c)) {  // METHOD done, go to URL
-          state_ = HTTPRequestParseState::BEFORE_URL;
-          http_request_->SetMethod(std::string(start, cur));  // string(begin, end) is [begin, end)
+          state_ = ParseState::BEFORE_URL;
+          request_->setMethod(std::string(start, cur));  // string(begin, end) is [begin, end)
           start = cur + 1;
         } else {
-          state_ = HTTPRequestParseState::INVALID_METHOD;  // method must be uppercase
+          state_ = ParseState::INVALID_METHOD;  // method must be uppercase
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_URL: {
+      case ParseState::BEFORE_URL: {
         if (c == '/') {
-          state_ = HTTPRequestParseState::URL;
+          state_ = ParseState::URL;
         } else {
-          state_ = HTTPRequestParseState::INVALID_URL;  // URL must start with '/'
+          state_ = ParseState::INVALID_URL;  // URL must start with '/'
         }
         break;
       }
-      case HTTPRequestParseState::URL: {
+      case ParseState::URL: {
         if (c == '?') {  // encounter request params
-          state_ = HTTPRequestParseState::BEFORE_URL_PARAM_KEY;
-          http_request_->SetUrl(std::string(start, cur));  // string(begin, end) is [begin, end)
+          state_ = ParseState::BEFORE_URL_PARAM_KEY;
+          request_->setUrl(std::string(start, cur));  // string(begin, end) is [begin, end)
           start = cur + 1;
         } else if (isblank(c)) {  // done request params
-          state_ = HTTPRequestParseState::BEFORE_PROTOCOL;
-          http_request_->SetUrl(std::string(start, cur));  // string(begin, end) is [begin, end)
+          state_ = ParseState::BEFORE_PROTOCOL;
+          request_->setUrl(std::string(start, cur));  // string(begin, end) is [begin, end)
           start = cur + 1;
         } else if (isInvalidURLChar(c)) {
-          state_ = HTTPRequestParseState::INVALID_URL;
+          state_ = ParseState::INVALID_URL;
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_URL_PARAM_KEY: {
+      case ParseState::BEFORE_URL_PARAM_KEY: {
         if (isInvalidURLChar(c)) {  // after '?' or '&'
-          state_ = HTTPRequestParseState::INVALID_URL;
+          state_ = ParseState::INVALID_URL;
         } else {
-          state_ = HTTPRequestParseState::URL_PARAM_KEY;
+          state_ = ParseState::URL_PARAM_KEY;
         }
         break;
       }
-      case HTTPRequestParseState::URL_PARAM_KEY: {
+      case ParseState::URL_PARAM_KEY: {
         if (c == '=') {  // done param key, go to param value
-          state_ = HTTPRequestParseState::BEFORE_URL_PARAM_VALUE;
+          state_ = ParseState::BEFORE_URL_PARAM_VALUE;
           colon = cur;
         } else if (isInvalidURLChar(c)) {
-          state_ = HTTPRequestParseState::INVALID_URL;
+          state_ = ParseState::INVALID_URL;
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_URL_PARAM_VALUE: {
+      case ParseState::BEFORE_URL_PARAM_VALUE: {
         if (isInvalidURLChar(c)) {  // after '='
-          state_ = HTTPRequestParseState::INVALID_URL;
+          state_ = ParseState::INVALID_URL;
         } else {
-          state_ = HTTPRequestParseState::URL_PARAM_VALUE;
+          state_ = ParseState::URL_PARAM_VALUE;
         }
         break;
       }
-      case HTTPRequestParseState::URL_PARAM_VALUE: {
+      case ParseState::URL_PARAM_VALUE: {
         if (c == '&') {  // encounter next param
-          state_ = HTTPRequestParseState::BEFORE_URL_PARAM_KEY;
-          http_request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, cur));
+          state_ = ParseState::BEFORE_URL_PARAM_KEY;
+          request_->addParam(std::string(start, colon), std::string(colon + 1, cur));
           start = cur + 1;
         } else if (isblank(c)) {  // done request params
-          state_ = HTTPRequestParseState::BEFORE_PROTOCOL;
-          http_request_->SetRequestParams(std::string(start, colon), std::string(colon + 1, cur));
+          state_ = ParseState::BEFORE_PROTOCOL;
+          request_->addParam(std::string(start, colon), std::string(colon + 1, cur));
           start = cur + 1;
         } else if (isInvalidURLChar(c)) {
-          state_ = HTTPRequestParseState::INVALID_URL;
+          state_ = ParseState::INVALID_URL;
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_PROTOCOL: {
+      case ParseState::BEFORE_PROTOCOL: {
         if (isupper(c)) {  // uppercase may be PROTOCOL
-          state_ = HTTPRequestParseState::PROTOCOL;
+          state_ = ParseState::PROTOCOL;
           start = cur;
         } else {
-          state_ = HTTPRequestParseState::INVALID_PROTOCOL;  // PROTOCOL must be uppercase
+          state_ = ParseState::INVALID_PROTOCOL;  // PROTOCOL must be uppercase
         }
         break;
       }
-      case HTTPRequestParseState::PROTOCOL: {
+      case ParseState::PROTOCOL: {
         if (isupper(c)) {  // we are still in the PROTOCOL
           break;
         }
         if (c == '/') {  // done PROTOCOL, go to VERSION
-          state_ = HTTPRequestParseState::BEFORE_VERSION;
-          http_request_->SetProtocol(std::string(start, cur));
+          state_ = ParseState::BEFORE_VERSION;
+          request_->setProtocol(std::string(start, cur));
           start = cur + 1;
         } else {
-          state_ = HTTPRequestParseState::INVALID_PROTOCOL;  // other cases is invalid
+          state_ = ParseState::INVALID_PROTOCOL;  // other cases is invalid
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_VERSION: {
+      case ParseState::BEFORE_VERSION: {
         if (isdigit(c)) {
-          state_ = HTTPRequestParseState::VERSION;
+          state_ = ParseState::VERSION;
         } else {
-          state_ = HTTPRequestParseState::INVALID_PROTOCOL;  // VERSION must has at least 1 digit
+          state_ = ParseState::INVALID_PROTOCOL;  // VERSION must has at least 1 digit
         }
         break;
       }
-      case HTTPRequestParseState::VERSION: {
+      case ParseState::VERSION: {
         if (c == CR) {  // done version
-          state_ = HTTPRequestParseState::ENCOUNTER_CR;
-          http_request_->SetVersion(std::string(start, cur));
+          state_ = ParseState::ENCOUNTER_CR;
+          request_->setVersion(std::string(start, cur));
           start = cur + 1;
         } else if (isdigit(c) || c == '.') {  // only allow digit and '.' in version
           break;
         } else {
-          state_ = HTTPRequestParseState::INVALID_PROTOCOL;
+          state_ = ParseState::INVALID_PROTOCOL;
         }
         break;
       }
-      case HTTPRequestParseState::ENCOUNTER_CR: {
+      case ParseState::ENCOUNTER_CR: {
         if (c == LF) {  // '\n' after '\r', means this line is over
-          state_ = HTTPRequestParseState::CR_LF;
+          state_ = ParseState::CR_LF;
           start = cur + 1;
         } else {
-          state_ = HTTPRequestParseState::INVALID_CRLF;  // CR not followed by LF
+          state_ = ParseState::INVALID_CRLF;  // CR not followed by LF
         }
         break;
       }
-      case HTTPRequestParseState::CR_LF: {
+      case ParseState::CR_LF: {
         if (c == CR) {  // encounter blank line
-          state_ = HTTPRequestParseState::CR_LF_CR;
+          state_ = ParseState::CR_LF_CR;
         } else if (isInvalidHeaderKeyChar(c)) {  // if not CR, must be header key
-          state_ = HTTPRequestParseState::INVALID_HEADER;
+          state_ = ParseState::INVALID_HEADER;
         } else {
-          state_ = HTTPRequestParseState::HEADER_KEY;
+          state_ = ParseState::HEADER_KEY;
         }
         break;
       }
-      case HTTPRequestParseState::HEADER_KEY: {
+      case ParseState::HEADER_KEY: {
         if (c == ':') {
-          state_ = HTTPRequestParseState::BEFORE_HEADER_VALUE;
+          state_ = ParseState::BEFORE_HEADER_VALUE;
           colon = cur;
         } else if (isInvalidHeaderKeyChar(c)) {  // space not allowed in header key
-          state_ = HTTPRequestParseState::INVALID_HEADER;
+          state_ = ParseState::INVALID_HEADER;
         }
         break;
       }
-      case HTTPRequestParseState::BEFORE_HEADER_VALUE: {
+      case ParseState::BEFORE_HEADER_VALUE: {
         if (!isblank(c)) {
-          state_ = HTTPRequestParseState::INVALID_HEADER;  // must be space between ':' and header value
+          state_ = ParseState::INVALID_HEADER;  // must be space between ':' and header value
         } else {
-          state_ = HTTPRequestParseState::HEADER_VALUE;
+          state_ = ParseState::HEADER_VALUE;
         }
         break;
       }
-      case HTTPRequestParseState::HEADER_VALUE: {
+      case ParseState::HEADER_VALUE: {
         if (c == CR) {
-          state_ = HTTPRequestParseState::ENCOUNTER_CR;
-          http_request_->AddHeader(
+          state_ = ParseState::ENCOUNTER_CR;
+          request_->addHeader(
               std::string(start, colon),
               std::string(colon + 2, cur));  // colon+2 is because there is a space between ':' and the header value
           start = cur + 1;
@@ -277,76 +277,76 @@ HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, 
         // we do not inspect the header value here, cuz the it varies a lot
         break;
       }
-      case HTTPRequestParseState::CR_LF_CR: {
+      case ParseState::CR_LF_CR: {
         if (c == LF) {
-          if (http_request_->GetHeaders().count("Content-Length")) {  // check if there is field "Content-Length"
-            if (content_length_ = atoi(http_request_->GetHeaderByKey("Content-Length").c_str()); content_length_ > 0) {
-              state_ = HTTPRequestParseState::BODY;
+          if (request_->headers().count("Content-Length")) {  // check if there is field "Content-Length"
+            if (contentLength_ = atoi(request_->getHeaderByKey("Content-Length").c_str()); contentLength_ > 0) {
+              state_ = ParseState::BODY;
             } else {
-              state_ = HTTPRequestParseState::COMPLETE;
+              state_ = ParseState::COMPLETE;
             }
           } else {
             if (cur - begin + 1 < static_cast<long>(size)) {  // if LF is the last char, then cur-begin = size-1
-              state_ = HTTPRequestParseState::BODY;
+              state_ = ParseState::BODY;
             } else {
-              state_ = HTTPRequestParseState::COMPLETE;
+              state_ = ParseState::COMPLETE;
             }
           }
           start = cur + 1;
         } else {
-          state_ = HTTPRequestParseState::INVALID_CRLF;
+          state_ = ParseState::INVALID_CRLF;
         }
         break;
       }
-      case HTTPRequestParseState::BODY: {
-        state_ = HTTPRequestParseState::COMPLETE;
+      case ParseState::BODY: {
+        state_ = ParseState::COMPLETE;
         // if "Content-Length" is presented, use it as body length
         size_t bodylength;
-        if (content_length_ != 0) {
-          bodylength = std::min(static_cast<unsigned long>(content_length_), (size - (cur - begin)));
+        if (contentLength_ != 0) {
+          bodylength = std::min(static_cast<unsigned long>(contentLength_), (size - (cur - begin)));
         } else {
           bodylength = size - (cur - begin);
         }
-        http_request_->SetBody(std::string(start, start + bodylength));
+        request_->setBody(std::string(start, start + bodylength));
         break;
       }
       default:
-        state_ = HTTPRequestParseState::INVALID;
+        state_ = ParseState::INVALID;
         break;
     }
     ++cur;
   }
   switch (state_) {
-    case HTTPRequestParseState::COMPLETE: {
+    case ParseState::COMPLETE: {
       // reset the state
-      snapshot_->parsingState__ = HTTPRequestParseState::INIT;
-      return HTTPRequestParseState::COMPLETE;
+      snapshot_->parseState__ = ParseState::INIT;
+      return ParseState::COMPLETE;
       break;
     }
-    case HTTPRequestParseState::INVALID:
-      return HTTPRequestParseState::INVALID;
+    case ParseState::INVALID:
+      return ParseState::INVALID;
       break;
-    case HTTPRequestParseState::INVALID_METHOD:
-      return HTTPRequestParseState::INVALID_METHOD;
+    case ParseState::INVALID_METHOD:
+      return ParseState::INVALID_METHOD;
       break;
-    case HTTPRequestParseState::INVALID_URL:
-      return HTTPRequestParseState::INVALID_URL;
+    case ParseState::INVALID_URL:
+      return ParseState::INVALID_URL;
       break;
-    case HTTPRequestParseState::INVALID_PROTOCOL:
-      return HTTPRequestParseState::INVALID_PROTOCOL;
+    case ParseState::INVALID_PROTOCOL:
+      return ParseState::INVALID_PROTOCOL;
       break;
-    case HTTPRequestParseState::INVALID_HEADER:
-      return HTTPRequestParseState::INVALID_HEADER;
+    case ParseState::INVALID_HEADER:
+      return ParseState::INVALID_HEADER;
       break;
-    case HTTPRequestParseState::INVALID_CRLF:
-      return HTTPRequestParseState::INVALID_CRLF;
+    case ParseState::INVALID_CRLF:
+      return ParseState::INVALID_CRLF;
       break;
     default:
       // if the state is not complete, then we need to save the state
       if (snapshot_) {
-        snapshot_->parsingState__ = state_;
-        snapshot_->last_req__ = std::string(start, cur);
-        LOG_TRACE << "HTTPContext::ParseRequest: unfinished, last request: \"" << snapshot_->last_req__ << '"';
+        snapshot_->parseState__ = state_;
+        snapshot_->lastRequest__ = std::string(start, cur);
+        LOG_TRACE << "HTTPContext::parseRequest: unfinished, last request: \"" << snapshot_->lastRequest__ << '"';
         if (colon != begin) {
           snapshot_->colon__ = colon - start;
         } else {

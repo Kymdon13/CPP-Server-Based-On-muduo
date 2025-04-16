@@ -15,21 +15,21 @@ class TimeStamp {
   TimeStamp();
   explicit TimeStamp(time_t time);
 
-  bool operator<(const TimeStamp &rhs) const { return time_ < rhs.GetTime(); }
-  bool operator<=(const TimeStamp &rhs) const { return time_ <= rhs.GetTime(); }
-  bool operator==(const TimeStamp &rhs) const { return time_ == rhs.GetTime(); }
+  bool operator<(const TimeStamp &rhs) const { return time_ < rhs.getTime(); }
+  bool operator<=(const TimeStamp &rhs) const { return time_ <= rhs.getTime(); }
+  bool operator==(const TimeStamp &rhs) const { return time_ == rhs.getTime(); }
 
   TimeStamp operator+(const double &time);
 
-  std::string ToFormattedString(const char *format = "%4d-%02d-%02d %02d:%02d:%02d.%06d") const;
+  std::string formattedString(const char *format = "%4d-%02d-%02d %02d:%02d:%02d.%06d") const;
 
-  time_t GetTime() const { return time_; };
-  time_t GetSecond() const { return static_cast<time_t>(time_ / SECOND2MICROSECOND); }
-  void SetTime(time_t time) { time_ = time; };
+  time_t getTime() const { return time_; };
+  time_t getSecond() const { return static_cast<time_t>(time_ / SECOND2MICROSECOND); }
+  void setTime(time_t time) { time_ = time; };
 
-  bool IsValid() const { return time_ > 0; }
+  bool isValid() const { return time_ > 0; }
 
-  static inline TimeStamp Now() {
+  static inline TimeStamp now() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return TimeStamp(tv.tv_sec * SECOND2MICROSECOND + tv.tv_usec);

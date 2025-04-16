@@ -10,7 +10,7 @@
 
 class HTTPResponse {
  public:
-  enum class HTTPStatus : unsigned {
+  enum class Status : uint16_t {
     Continue = 100,
     OK = 200,
     BadRequest = 400,
@@ -21,38 +21,39 @@ class HTTPResponse {
     HTTPVersionNotSupported = 505
   };
 
-  enum class HTTPContentType : uint8_t { text_plain, text_html, text_css, text_javascript, image_jpeg };
+  enum class ContentType : uint8_t { text_plain, text_html, text_css, text_javascript, image_jpeg };
 
  private:
   bool close_;
-  HTTPRequest::HTTPVersion version_{HTTPRequest::HTTPVersion::Invalid};
-  HTTPStatus status_{HTTPStatus::InternalServerError};
+  HTTPRequest::Version version_{HTTPRequest::Version::Invalid};
+  Status status_{Status::InternalServerError};
   std::unordered_map<std::string, std::string> headers_;
   // we use string to store the header
   // body_ = response body
   std::shared_ptr<Buffer> body_;
-  // res_ = response line + headers + body
-  std::shared_ptr<Buffer> res_;
+  // response_ = response line + headers + body
+  std::shared_ptr<Buffer> response_;
 
  public:
-  HTTPResponse(bool close, HTTPStatus status = HTTPStatus::OK)
-      : close_(close), status_(status), body_(nullptr), res_(nullptr) {}
+  HTTPResponse(bool close, Status status = Status::OK)
+      : close_(close), status_(status), body_(nullptr), response_(nullptr) {}
   ~HTTPResponse() {}
 
-  void SetStatus(HTTPStatus status) { status_ = status; }
-  void SetContentType(HTTPContentType content_type) {
-    AddHeader("Content-Type", HTTPContentTypeToString(content_type));
+  void setStatus(Status status) { status_ = status; }
+  void setContentType(ContentType content_type) {
+    addHeader("Content-Type", contentTypeToString(content_type));
   }
-  void AddHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
-  void SetBody(std::shared_ptr<Buffer> body) { body_ = body; }
-  bool IsClose() { return close_; }
-  void SetClose(bool close) { close_ = close; }
+  void addHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
+  void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
+  bool isClose() { return close_; }
+  void setClose(bool close) { close_ = close; }
 
-  static std::string GetStaticPath();
-  static void SetStaticPath(const std::string &path);
+  // path to store static files, must be absolute path
+  static std::string staticPath();
+  static void setStaticPath(const std::string &path);
 
-  static std::string HTTPStatusToString(HTTPStatus stat);
-  static std::string HTTPContentTypeToString(HTTPContentType type);
+  static std::string statusToString(Status stat);
+  static std::string contentTypeToString(ContentType type);
 
-  std::shared_ptr<Buffer> GetResponse();
+  std::shared_ptr<Buffer> getResponse();
 };

@@ -17,7 +17,7 @@
 // super long http body: 100 * 1000 bytes
 void http_client_body() {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  ErrorIf(sockfd == -1, "socket create error");
+  errorif(sockfd == -1, "socket create error");
 
   struct sockaddr_in serv_addr;
   bzero(&serv_addr, sizeof(serv_addr));
@@ -25,7 +25,7 @@ void http_client_body() {
   serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
   serv_addr.sin_port = htons(5000);
 
-  ErrorIf(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
+  errorif(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
 
   std::string http_request =
       "GET /hello?a=2&b=456  HTTP/1.1\r\n"
@@ -86,7 +86,7 @@ void http_client_body() {
       break;
     } else if (read_bytes == -1) {
       close(sockfd);
-      ErrorIf(true, "socket read error");
+      errorif(true, "socket read error");
     }
   }
   close(sockfd);
@@ -95,7 +95,7 @@ void http_client_body() {
 // super long http header
 void http_client_header() {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  ErrorIf(sockfd == -1, "socket create error");
+  errorif(sockfd == -1, "socket create error");
 
   // ban Nagle
   int flag = 1;
@@ -107,7 +107,7 @@ void http_client_header() {
   serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
   serv_addr.sin_port = htons(5000);
 
-  ErrorIf(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
+  errorif(connect(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == -1, "socket connect error");
 
   std::string http_request =
       "GET /cat.jpg HTTP/1.1\r\n"
@@ -176,7 +176,7 @@ void http_client_header() {
       break;
     } else if (read_bytes == -1) {
       close(sockfd);
-      ErrorIf(true, "socket read error");
+      errorif(true, "socket read error");
     }
   }
   close(sockfd);

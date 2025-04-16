@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class TCPConnection;
 class Channel;
@@ -12,7 +12,7 @@ class EventLoop;
 class Acceptor {
  private:
   EventLoop *loop_;
-  int listen_fd_;
+  int sockfd_;
   std::unique_ptr<Channel> channel_;
   std::function<void(int)> on_new_connection_callback_;
 
@@ -21,11 +21,11 @@ class Acceptor {
   Acceptor(EventLoop *loop, const char *ip, int port);
   ~Acceptor();
 
-  void Create();
+  void create();
 
-  void Bind(const char *ip, int port);
+  void bind(const char *ip, int port);
 
-  void Listen();
+  void listen();
 
-  void OnNewConnection(std::function<void(int)> cb);
+  void onNewConnection(std::function<void(int)> cb);
 };

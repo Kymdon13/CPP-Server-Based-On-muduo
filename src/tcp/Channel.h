@@ -5,7 +5,7 @@
 #include <functional>
 #include <memory>
 
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class EventLoop;
 class TCPConnection;
@@ -14,19 +14,19 @@ class Channel {
  private:
   int fd_;
   EventLoop *loop_;
-  event_t listen_event_;
-  event_t ready_event_;
+  event_t listenEvent_;
+  event_t readyEvent_;
   bool in_epoll_{false};
   std::function<void()> read_callback_;
   std::function<void()> write_callback_;
 
   bool flushable_{false};
 
-  std::weak_ptr<TCPConnection> tcp_connection_ptr_;
+  std::weak_ptr<TCPConnection> tcpConnection_;
 
-  bool is_connection_{false};
+  bool isConnection_{false};
 
-  /// @brief modify listen_event_
+  /// @brief modify listenEvent_
   void updateEvent(event_t event, bool enable);
 
  public:
@@ -35,36 +35,36 @@ class Channel {
   ~Channel();
 
   /// @brief call epoll_ctl
-  void FlushEvent();
+  void flushEvent();
 
-  void HandleEvent() const;
+  void handleEvent() const;
 
   void enableReading();
   void disableReading();
-  bool isReading() const { return listen_event_ & (EPOLLIN | EPOLLPRI); }
+  bool isReading() const { return listenEvent_ & (EPOLLIN | EPOLLPRI); }
 
   void enableWriting();
   void disableWriting();
-  bool isWriting() const { return listen_event_ & EPOLLOUT; }
+  bool isWriting() const { return listenEvent_ & EPOLLOUT; }
 
-  void DisableAll();
+  void disableAll();
 
   // XXX(wzy) there is no useET(), it is integrated into the ctor
 
-  int GetFD() const;
+  int fd() const;
 
   void removeSelf();
 
-  event_t GetListenEvent() const;
-  event_t GetReadyEvent() const;
+  event_t listenEvent() const;
+  event_t readyEvent() const;
 
-  bool IsInEpoll() const;
-  void SetInEpoll(bool exist = true);
+  bool isInEpoll() const;
+  void setInEpoll(bool exist = true);
 
-  void SetReadyEvents(event_t ev);
+  void setReadyEvents(event_t ev);
 
-  void SetReadCallback(std::function<void()> callback);
-  void SetWriteCallback(std::function<void()> callback);
+  void setReadCallback(std::function<void()> callback);
+  void setWriteCallback(std::function<void()> callback);
 
-  void SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn);
+  void setTCPConnection(std::shared_ptr<TCPConnection> conn);
 };

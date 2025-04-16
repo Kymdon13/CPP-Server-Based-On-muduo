@@ -5,24 +5,24 @@
 #include <functional>
 
 #include "TimeStamp.h"
-#include "base/cppserver-common.h"
+#include "base/common.h"
 
 class Timer {
  private:
   TimeStamp expiration_;
   std::function<void()> cb_;
-  bool is_interval_;
+  bool isInterval_;
   time_t interval_;
 
  public:
   DISABLE_COPYING_AND_MOVING(Timer);
   Timer(TimeStamp timestamp, double interval, const std::function<void()> &cb);
 
-  void Restart(TimeStamp now);
+  void restart(TimeStamp now);
 
-  void Run() const;
+  void run() const;
 
-  TimeStamp GetExpiration() const;
+  TimeStamp expiration() const;
 
-  bool IsInterval() const;
+  bool isInterval() const;
 };

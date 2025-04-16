@@ -8,43 +8,43 @@
 
 std::string g_staticPath = "/home/wzy/code/cpp-server/static/";
 
-std::string HTTPResponse::GetStaticPath() { return g_staticPath; }
-void HTTPResponse::SetStaticPath(const std::string &path) { g_staticPath = path; }
+std::string HTTPResponse::staticPath() { return g_staticPath; }
+void HTTPResponse::setStaticPath(const std::string &path) { g_staticPath = path; }
 
-std::string HTTPResponse::HTTPStatusToString(HTTPStatus stat) {
+std::string HTTPResponse::statusToString(Status stat) {
   switch (stat) {
-    case HTTPStatus::Continue:
+    case Status::Continue:
       return "Continue";
-    case HTTPStatus::OK:
+    case Status::OK:
       return "OK";
-    case HTTPStatus::BadRequest:
+    case Status::BadRequest:
       return "Bad Request";
-    case HTTPStatus::Forbidden:
+    case Status::Forbidden:
       return "Forbidden";
-    case HTTPStatus::NotFound:
+    case Status::NotFound:
       return "Not Found";
-    case HTTPStatus::InternalServerError:
+    case Status::InternalServerError:
       return "Internal Server Error";
-    case HTTPStatus::NotImplemented:
+    case Status::NotImplemented:
       return "Not Implemented";
-    case HTTPStatus::HTTPVersionNotSupported:
+    case Status::HTTPVersionNotSupported:
       return "HTTP Version Not Supported";
     default:
       return "Internal Server Error";
   }
 }
 
-std::string HTTPResponse::HTTPContentTypeToString(HTTPContentType type) {
+std::string HTTPResponse::contentTypeToString(ContentType type) {
   switch (type) {
-    case HTTPContentType::text_plain:
+    case ContentType::text_plain:
       return "text/plain; charset=utf-8";
-    case HTTPContentType::text_html:
+    case ContentType::text_html:
       return "text/html; charset=utf-8";
-    case HTTPContentType::text_css:
+    case ContentType::text_css:
       return "text/css; charset=utf-8";
-    case HTTPContentType::text_javascript:
+    case ContentType::text_javascript:
       return "text/javascript; charset=utf-8";
-    case HTTPContentType::image_jpeg:
+    case ContentType::image_jpeg:
       return "image/jpeg";
     default:
       return "text/plain; charset=utf-8";
@@ -59,12 +59,12 @@ std::string HTTPResponse::HTTPContentTypeToString(HTTPContentType type) {
 // Access-Control-Allow-Origin: https://platform.moonshot.cn
 // Vary: Origin
 // Request-Context: appId=cid-v1:e97341f6-8fff-46a6-9229-fbbfe0892c78
-std::shared_ptr<Buffer> HTTPResponse::GetResponse() {
+std::shared_ptr<Buffer> HTTPResponse::getResponse() {
   std::string before_body;
 
   // response line
   before_body += std::string("HTTP/1.1") + ' ' + std::to_string(static_cast<unsigned>(status_)) + ' ' +
-                 HTTPStatusToString(status_) + "\r\n";
+                 statusToString(status_) + "\r\n";
 
   // add connection related header
   if (close_) {
@@ -93,12 +93,12 @@ std::shared_ptr<Buffer> HTTPResponse::GetResponse() {
   } else {
     len = before_body.size() + 2;  // +2 for \r\n
   }
-  res_ = std::make_shared<Buffer>(len);
-  res_->append(before_body.c_str(), before_body.size());
+  response_ = std::make_shared<Buffer>(len);
+  response_->append(before_body.c_str(), before_body.size());
   if (body_) {
-    res_->append(body_->peek(), body_->readableBytes());
+    response_->append(body_->peek(), body_->readableBytes());
   }
-  res_->append("\r\n", 2);
+  response_->append("\r\n", 2);
 
-  return res_;
+  return response_;
 }

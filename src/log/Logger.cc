@@ -26,11 +26,11 @@ void defaultFlush() { fflush(stdout); }
 
 Logger::LogLevel g_logLevel = Logger::LogLevel::TRACE;
 // output to stdout by default
-Logger::OutputFunc g_output = defaultOutput;
-Logger::FlushFunc g_flushBeforeAbort = defaultFlush;
+Logger::outputFunc g_output = defaultOutput;
+Logger::flushFunc g_flushBeforeAbort = defaultFlush;
 
 Logger::Wrapper::Wrapper(LogLevel level, const SourceFile &file, int line)
-    : time_(TimeStamp::Now()), stream_(), level_(level), file_(file), line_(line) {
+    : time_(TimeStamp::now()), stream_(), level_(level), file_(file), line_(line) {
   formatTime();
   CurrentThread::gettid();
   // 2. thread info
@@ -42,9 +42,9 @@ Logger::Wrapper::Wrapper(LogLevel level, const SourceFile &file, int line)
 }
 void Logger::Wrapper::formatTime() {
   // if multiple messages loaded during the lifetime of the Logger, reuse t_time
-  if (t_lastMicrosecond != time_.GetTime()) {
-    t_lastMicrosecond = time_.GetTime();
-    std::string time_str = time_.ToFormattedString();
+  if (t_lastMicrosecond != time_.getTime()) {
+    t_lastMicrosecond = time_.getTime();
+    std::string time_str = time_.formattedString();
     memcpy(t_time, time_str.c_str(), time_str.size());
   }
   // 1. time info
@@ -79,5 +79,5 @@ Logger::~Logger() {
 Logger::LogLevel Logger::logLevel() { return g_logLevel; }
 void Logger::setLogLevel(LogLevel level) { g_logLevel = level; }
 
-void Logger::setOutput(OutputFunc fn) { g_output = fn; }
-void Logger::setFlush(FlushFunc fn) { g_flushBeforeAbort = fn; }
+void Logger::setOutput(outputFunc fn) { g_output = fn; }
+void Logger::setFlush(flushFunc fn) { g_flushBeforeAbort = fn; }

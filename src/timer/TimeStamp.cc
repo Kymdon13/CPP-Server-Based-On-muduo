@@ -12,7 +12,7 @@ TimeStamp TimeStamp::operator+(const double &time) {
   return TimeStamp(time_ += delta);
 }
 
-std::string TimeStamp::ToFormattedString(const char *format) const {
+std::string TimeStamp::formattedString(const char *format) const {
   char buf[64] = {0};
   time_t seconds = static_cast<time_t>(time_ / SECOND2MICROSECOND);
   struct tm tm_time;

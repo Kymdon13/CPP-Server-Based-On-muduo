@@ -9,16 +9,16 @@
 
 int main() {
   EventLoop *loop = new EventLoop();
-  TimeStamp now = TimeStamp::Now();
-  std::cout << "Current Time: " << now.ToFormattedString() << std::endl;
+  TimeStamp now = TimeStamp::now();
+  std::cout << "Current Time: " << now.formattedString() << std::endl;
 
   std::cout << "Adding timer..." << std::endl;
-  loop->RunAfter(2.0, []() { std::cout << "Timer triggered after 2 seconds!" << std::endl; });
-  loop->RunAfter(3.0, [loop]() { loop->Quit(); });
+  loop->runAfter(2.0, []() { std::cout << "Timer triggered after 2 seconds!" << std::endl; });
+  loop->runAfter(3.0, [loop]() { loop->quit(); });
   std::cout << "Timer added." << std::endl;
 
   std::cout << "Starting event loop..." << std::endl;
-  loop->Loop();
+  loop->loop();
   std::cout << "Program exited." << std::endl;
 
   delete loop;

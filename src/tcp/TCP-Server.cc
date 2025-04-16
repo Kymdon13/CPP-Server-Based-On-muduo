@@ -29,7 +29,7 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
    * The call hierarchy is:
    * Channel::read_callback_()->Acceptor::on_new_connection_callback_()
    */
-  acceptor_->OnNewConnection([this](int fd) {
+  acceptor_->onNewConnection([this](int fd) {
     if (fd == -1) {
       LOG_ERROR << "TCPServer::TCPServer, fd == -1";
       return;
@@ -37,44 +37,44 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
     // create TCPConnection (!!!note that TCPConnection must be held by a shared_ptr to enable the shared_from_this()
     // method), and dispatch it to a random subReactor
     std::shared_ptr<TCPConnection> conn =
-        std::make_shared<TCPConnection>(thread_pool_->GetSubReactor(), fd, next_connection_id_);
+        std::make_shared<TCPConnection>(threadPool_->getSubReactor(), fd, next_id_);
 
     /**
      * set TCPConnecion::on_close_callback_
      */
-    conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
-      loop_->CallOrQueue([this, conn]() {
+    conn->onClose([this](std::shared_ptr<TCPConnection> conn) {
+      loop_->callOrQueue([this, conn]() {
         // developer defined close function, used to free self-defined resources
         if (on_close_callback_) {
           on_close_callback_(conn);
         }
 
-        std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
-        // remove the TCPConnection from the connection_map_
-        int fd = conn->GetFD();
-        auto it = connection_map_.find(fd);
-        if (it == connection_map_.end()) {
-          LOG_ERROR << "TCPServer::TCPServer, can not find fd: \"" << fd << "\" in connection_map_";
+        std::cout << "tid-" << CurrentThread::gettid() << ": TCPConnection::handleClose" << std::endl;
+        // remove the TCPConnection from the conn_map_
+        int fd = conn->fd();
+        auto it = conn_map_.find(fd);
+        if (it == conn_map_.end()) {
+          LOG_ERROR << "TCPServer::TCPServer, can not find fd: \"" << fd << "\" in conn_map_";
           return;
         }
-        connection_map_.erase(fd);
+        conn_map_.erase(fd);
         // remove the channel from the system epoll
-        conn->GetChannel()->removeSelf();
+        conn->channel()->removeSelf();
       });
     });
     /**
      * set TCPConnecion's other callbacks
      */
-    // set TCPConnecion::on_connection_callback_, will be called in TCPConnection::EnableConnection
-    conn->OnConnection(on_connection_callback_);
+    // set TCPConnecion::on_connection_callback_, will be called in TCPConnection::enableConnection
+    conn->onConnection(on_connection_callback_);
     // set TCPConnecion::on_message_callback_
-    conn->OnMessage(on_message_callback_);
-    // update the connection_map_
-    connection_map_[fd] = conn;
-    // update next_connection_id_
-    next_connection_id_ = (++next_connection_id_) % MAX_CONN_ID;
+    conn->onMessage(on_message_callback_);
+    // update the conn_map_
+    conn_map_[fd] = conn;
+    // update next_id_
+    next_id_ = (++next_id_) % MAX_CONN_ID;
     // enable the connection
-    conn->EnableConnection();
+    conn->enableConnection();
   });
 
   /**
@@ -82,23 +82,23 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
    */
   unsigned int hardware_concurrency =
       std::thread::hardware_concurrency() - 2;  // leave 2 threads for main reactor and AsyncLogging
-  thread_pool_ = std::make_unique<ThreadPool>(loop_, hardware_concurrency);
+  threadPool_ = std::make_unique<ThreadPool>(loop_, hardware_concurrency);
 }
 
-void TCPServer::Start() {
+void TCPServer::start() {
   // dispatch the sub reactors to the threads
-  thread_pool_->Init();
+  threadPool_->init();
   // start looping
   std::cout << "[main thread] - EventLoop start looping..." << std::endl;
-  loop_->Loop();
+  loop_->loop();
 }
 
-void TCPServer::OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPServer::onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_connection_callback_ = std::move(func);
 }
-void TCPServer::OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPServer::onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_message_callback_ = std::move(func);
 }
-void TCPServer::OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+void TCPServer::onClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
   on_close_callback_ = std::move(func);
 }

@@ -5,18 +5,18 @@
 #include <stdexcept>
 #include <string>
 
-inline void ErrorIf(bool condition, const char *errmsg) {
+inline void errorif(bool condition, const char *errmsg) {
   if (condition) {
-    std::string prefix = "ErrorIf: ";
+    std::string prefix = "errorif: ";
     std::string msg = prefix + errmsg;
     perror(msg.c_str());
     exit(EXIT_FAILURE);
   }
 }
 
-inline void WarnIf(bool condition, const char *wrnmsg) {
+inline void warnif(bool condition, const char *wrnmsg) {
   if (condition) {
-    std::string prefix = "WarnIf: ";
+    std::string prefix = "warnif: ";
     std::string msg = prefix + wrnmsg;
     perror(msg.c_str());
   }

@@ -6,7 +6,7 @@
 #include "log/Logger.h"
 
 int main() {
-  std::shared_ptr<AsyncLogging> asyncLog = AsyncLogging::Init();
+  std::shared_ptr<AsyncLogging> asyncLog = AsyncLogging::init();
   asyncLog->start();
 
   /**

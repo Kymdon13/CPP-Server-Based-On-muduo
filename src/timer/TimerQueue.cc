@@ -12,7 +12,7 @@
 
 bool TimerQueue::insert(const std::shared_ptr<Timer> &timer) {
   bool earliest = false;
-  TimeStamp when = timer->GetExpiration();
+  TimeStamp when = timer->expiration();
   auto it = timers_.begin();
   if (timers_.empty() || when < it->first) {
     earliest = true;
@@ -44,9 +44,9 @@ void TimerQueue::reset(const std::vector<Entry> &expired, TimeStamp now) {
   for (auto &entry : expired) {
     auto timer = entry.second;
     // filter out the timers in the cancelingTimers_
-    if (timer->IsInterval() && cancelingTimers_.find(timer) == cancelingTimers_.end()) {
+    if (timer->isInterval() && cancelingTimers_.find(timer) == cancelingTimers_.end()) {
       // set the expiration_
-      timer->Restart(now);
+      timer->restart(now);
       // reinsert the timer to the timers_ and active_timers_ set
       insert(timer);
     }
@@ -55,7 +55,7 @@ void TimerQueue::reset(const std::vector<Entry> &expired, TimeStamp now) {
   TimeStamp nextExpiration;
   if (!timers_.empty()) {
     nextExpiration = timers_.begin()->first;
-    if (nextExpiration.IsValid()) {
+    if (nextExpiration.isValid()) {
       resetTimerfd(nextExpiration);
     }
   }
@@ -64,7 +64,7 @@ void TimerQueue::reset(const std::vector<Entry> &expired, TimeStamp now) {
 void TimerQueue::resetTimerfd(TimeStamp nextExpiration) {
   struct itimerspec new_value;
   bzero(&new_value, sizeof(new_value));
-  time_t micro = nextExpiration.GetTime() - TimeStamp::Now().GetTime();
+  time_t micro = nextExpiration.getTime() - TimeStamp::now().getTime();
   // make sure the timerfd is set to at least 100 microseconds
   if (micro < 100) {
     micro = 100;
@@ -90,8 +90,8 @@ int createTimerfd() {
 
 TimerQueue::TimerQueue(EventLoop *loop)
     : loop_(loop), timerfd_(createTimerfd()), channel_(timerfd_, loop, true, false, false, false) {
-  channel_.SetReadCallback([this]() {
-    TimeStamp now = TimeStamp::Now();
+  channel_.setReadCallback([this]() {
+    TimeStamp now = TimeStamp::now();
     // read the timerfd
     uint64_t howmany = 0;
     ssize_t n = read(timerfd_, &howmany, sizeof(howmany));
@@ -105,19 +105,19 @@ TimerQueue::TimerQueue(EventLoop *loop)
     is_doing_timer_callback_ = true;
     cancelingTimers_.clear();
     for (auto &entry : expired) {
-      entry.second->Run();
+      entry.second->run();
     }
     is_doing_timer_callback_ = false;
     // reset the timers
     reset(expired, now);
   });
   // remember always enable the channel after setting the callback
-  channel_.FlushEvent();
+  channel_.flushEvent();
 }
 
 TimerQueue::~TimerQueue() {
   // remove the channel
-  channel_.DisableAll();
+  channel_.disableAll();
   channel_.removeSelf();
   // close the timerfd
   ::close(timerfd_);
@@ -126,22 +126,22 @@ TimerQueue::~TimerQueue() {
 std::shared_ptr<Timer> TimerQueue::addTimer(TimeStamp when, double interval, std::function<void()> cb) {
   std::shared_ptr<Timer> timer = std::make_shared<Timer>(when, interval, cb);
   // enqueue the add operation to the pendingFunctors_
-  loop_->CallOrQueue([this, timer]() {
+  loop_->callOrQueue([this, timer]() {
     // add the timer to the timers_ and active_timers_ set
     bool earliest = insert(timer);
     if (earliest) {
-      resetTimerfd(timer->GetExpiration());
+      resetTimerfd(timer->expiration());
     }
   });
   return timer;  // for the user to cancel the timer in the future
 }
 
 void TimerQueue::cancelTimer(const std::shared_ptr<Timer> &timer) {
-  loop_->CallOrQueue([this, timer]() {
+  loop_->callOrQueue([this, timer]() {
     // remove the timer from the timers_ and active_timers_ set
     auto it = active_timers_.find(timer);
     if (it != active_timers_.end()) {
-      timers_.erase(Entry(timer->GetExpiration(), timer));
+      timers_.erase(Entry(timer->expiration(), timer));
       active_timers_.erase(it);
     } else if (is_doing_timer_callback_) {
       cancelingTimers_.insert(timer);

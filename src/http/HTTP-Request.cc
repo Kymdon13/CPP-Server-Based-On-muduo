@@ -4,26 +4,26 @@
 #include <map>
 #include <string>
 
-HTTPRequest::HTTPRequest() : method_(HTTPMethod::Invalid), version_(HTTPVersion::Invalid){};
+HTTPRequest::HTTPRequest() : method_(Method::Invalid), version_(Version::Invalid){};
 
 HTTPRequest::~HTTPRequest(){};
 
-void HTTPRequest::SetVersion(const std::string &ver) {
+void HTTPRequest::setVersion(const std::string &ver) {
   if (ver == "1.1") {
-    version_ = HTTPVersion::HTTP11;
+    version_ = Version::HTTP11;
   } else if (ver == "1.0") {
-    version_ = HTTPVersion::HTTP10;
+    version_ = Version::HTTP10;
   } else {
-    version_ = HTTPVersion::Invalid;
+    version_ = Version::Invalid;
   }
 }
-HTTPRequest::HTTPVersion HTTPRequest::GetVersion() const { return version_; }
-std::string HTTPRequest::GetVersionString() const {
+HTTPRequest::Version HTTPRequest::version() const { return version_; }
+std::string HTTPRequest::versionAsString() const {
   switch (version_) {
-    case HTTPVersion::HTTP11:
+    case Version::HTTP11:
       return "HTTP/1.1";
       break;
-    case HTTPVersion::HTTP10:
+    case Version::HTTP10:
       return "HTTP/1.0";
       break;
     default:
@@ -32,28 +32,28 @@ std::string HTTPRequest::GetVersionString() const {
   }
 }
 
-bool HTTPRequest::SetMethod(const std::string &method) {
+bool HTTPRequest::setMethod(const std::string &method) {
   if (method == "GET") {
-    method_ = HTTPMethod::GET;
+    method_ = Method::GET;
   } else if (method == "HEAD") {
-    method_ = HTTPMethod::HEAD;
+    method_ = Method::HEAD;
   } else if (method == "POST") {
-    method_ = HTTPMethod::POST;
+    method_ = Method::POST;
   } else {
-    method_ = HTTPMethod::Invalid;
+    method_ = Method::Invalid;
   }
-  return method_ != HTTPMethod::Invalid;  // return false if Invalid
+  return method_ != Method::Invalid;  // return false if Invalid
 }
-HTTPRequest::HTTPMethod HTTPRequest::GetMethod() const { return method_; }
-std::string HTTPRequest::GetMethodString() const {
+HTTPRequest::Method HTTPRequest::method() const { return method_; }
+std::string HTTPRequest::methodAsString() const {
   switch (method_) {
-    case HTTPMethod::GET:
+    case Method::GET:
       return "GET";
       break;
-    case HTTPMethod::HEAD:
+    case Method::HEAD:
       return "HEAD";
       break;
-    case HTTPMethod::POST:
+    case Method::POST:
       return "POST";
       break;
     default:
@@ -62,27 +62,27 @@ std::string HTTPRequest::GetMethodString() const {
   }
 }
 
-void HTTPRequest::SetUrl(std::string url) { url_ = std::move(url); }
-const std::string &HTTPRequest::GetUrl() const { return url_; }
+void HTTPRequest::setUrl(std::string url) { url_ = std::move(url); }
+const std::string &HTTPRequest::url() const { return url_; }
 
-void HTTPRequest::SetRequestParams(const std::string &key, const std::string &value) { request_params_[key] = value; }
-std::string HTTPRequest::GetRequestValueByKey(const std::string &key) const {
+void HTTPRequest::addParam(const std::string &key, const std::string &value) { params_[key] = value; }
+std::string HTTPRequest::getParamByKey(const std::string &key) const {
   auto it = headers_.find(key);
   // return "" if key not found
   return it == headers_.end() ? std::string() : it->second;
 }
-const std::unordered_map<std::string, std::string> &HTTPRequest::GetRequestParams() const { return request_params_; }
+const std::unordered_map<std::string, std::string> &HTTPRequest::params() const { return params_; }
 
-void HTTPRequest::SetProtocol(std::string protocol) { protocol_ = std::move(protocol); }
-const std::string &HTTPRequest::GetProtocol() const { return protocol_; }
+void HTTPRequest::setProtocol(std::string protocol) { protocol_ = std::move(protocol); }
+const std::string &HTTPRequest::protocol() const { return protocol_; }
 
-void HTTPRequest::AddHeader(const std::string &field, const std::string &value) { headers_[field] = value; }
-std::string HTTPRequest::GetHeaderByKey(const std::string &field) const {
+void HTTPRequest::addHeader(const std::string &field, const std::string &value) { headers_[field] = value; }
+std::string HTTPRequest::getHeaderByKey(const std::string &field) const {
   auto it = headers_.find(field);
   // return "" if key not found
   return it == headers_.end() ? std::string() : it->second;
 }
-const std::unordered_map<std::string, std::string> &HTTPRequest::GetHeaders() const { return headers_; }
+const std::unordered_map<std::string, std::string> &HTTPRequest::headers() const { return headers_; }
 
-void HTTPRequest::SetBody(std::string str) { body_ = std::move(str); }
-const std::string &HTTPRequest::GetBody() const { return body_; }
+void HTTPRequest::setBody(std::string str) { body_ = std::move(str); }
+const std::string &HTTPRequest::body() const { return body_; }

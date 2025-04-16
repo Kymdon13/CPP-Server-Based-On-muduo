@@ -10,7 +10,7 @@ class HTTPRequest;
 
 class HTTPContext {
  public:
-  enum class HTTPRequestParseState : uint8_t {
+  enum class ParseState : uint8_t {
     INVALID = 0,
     INVALID_METHOD,
     INVALID_URL,
@@ -52,23 +52,23 @@ class HTTPContext {
   };
 
   struct ParsingSnapshot {
-    std::string last_req__;
-    HTTPContext::HTTPRequestParseState parsingState__ = HTTPRequestParseState::INIT;
+    std::string lastRequest__;
+    HTTPContext::ParseState parseState__ = ParseState::INIT;
     long colon__;
   };
 
  private:
-  int content_length_;
-  HTTPRequestParseState state_;
-  std::unique_ptr<HTTPRequest> http_request_;
+  int contentLength_;
+  ParseState state_;
+  std::unique_ptr<HTTPRequest> request_;
   std::unique_ptr<ParsingSnapshot> snapshot_;
 
  public:
   HTTPContext();
   ~HTTPContext();
 
-  void ResetState();
-  bool IsComplete();
-  HTTPRequest *GetHTTPRequest();
-  HTTPRequestParseState ParseRequest(const char *begin, size_t size);
+  void resetState();
+  bool isComplete();
+  HTTPRequest *getRequest();
+  ParseState parseRequest(const char *begin, size_t size);
 };

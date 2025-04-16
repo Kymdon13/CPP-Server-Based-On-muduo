@@ -11,16 +11,16 @@
 
 void Channel::updateEvent(event_t event, bool enable) {
   if (enable) {
-    listen_event_ |= event;
+    listenEvent_ |= event;
   } else {
-    listen_event_ &= ~event;
+    listenEvent_ &= ~event;
   }
   flushable_ = true;
 }
 
 Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET, bool is_connection)
-    : fd_(fd), loop_(loop), listen_event_(0), ready_event_(0), is_connection_(is_connection) {
-  // set listen_event_
+    : fd_(fd), loop_(loop), listenEvent_(0), readyEvent_(0), isConnection_(is_connection) {
+  // set listenEvent_
   if (enableReading) {
     updateEvent(EPOLLIN | EPOLLPRI, true);
   }
@@ -39,33 +39,33 @@ Channel::~Channel() {
   }
 }
 
-void Channel::FlushEvent() {
+void Channel::flushEvent() {
   if (flushable_) {
-    loop_->UpdateChannel(this);
+    loop_->updateChannel(this);
     flushable_ = false;
   }
 }
 
-void Channel::HandleEvent() const {
-  // use_count_lock only exists during the HandleEvent method
+void Channel::handleEvent() const {
+  // use_count_lock only exists during the handleEvent method
   std::shared_ptr<TCPConnection> use_count_lock;
-  if (is_connection_) {
-    use_count_lock = tcp_connection_ptr_.lock();
-    // TODO(wzy) there can be Acceptor->Channel->HandleEvent(), and Acceptor will not set the tcp_connection_ptr_ in the
+  if (isConnection_) {
+    use_count_lock = tcpConnection_.lock();
+    // TODO(wzy) there can be Acceptor->Channel->handleEvent(), and Acceptor will not set the tcpConnection_ in the
     // Channel, we must find a way to detect whether the caller is an Acceptor
     if (!use_count_lock) {  // if failed to promote the weak_ptr to shared_ptr
-      LOG_ERROR << "Channel::HandleEvent, failed to exec tcp_connection_ptr_.lock(), it's unsafe to continue";
+      LOG_ERROR << "Channel::handleEvent, failed to exec tcpConnection_.lock(), it's unsafe to continue";
       return;
     }
   }
-  if (ready_event_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
+  if (readyEvent_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
     if (read_callback_) {
       read_callback_();
     } else {
       LOG_WARN << "EPOLLIN registered but no read_callback_ is registered";
     }
   }
-  if (ready_event_ & EPOLLOUT) {
+  if (readyEvent_ & EPOLLOUT) {
     if (write_callback_) {
       write_callback_();
     } else {
@@ -76,47 +76,47 @@ void Channel::HandleEvent() const {
 
 void Channel::enableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, true);
-  FlushEvent();
+  flushEvent();
 }
 void Channel::disableReading() {
   updateEvent(EPOLLIN | EPOLLPRI, false);
-  FlushEvent();
+  flushEvent();
 }
 
 void Channel::enableWriting() {
   updateEvent(EPOLLOUT, true);
-  FlushEvent();
+  flushEvent();
 }
 void Channel::disableWriting() {
   updateEvent(EPOLLOUT, false);
-  FlushEvent();
+  flushEvent();
 }
 
-void Channel::DisableAll() {
-  listen_event_ = 0;  // disable all events
+void Channel::disableAll() {
+  listenEvent_ = 0;  // disable all events
   flushable_ = true;
-  FlushEvent();
+  flushEvent();
 }
 
-int Channel::GetFD() const { return fd_; }
+int Channel::fd() const { return fd_; }
 
 void Channel::removeSelf() {
   if (fd_ != -1) {
-    loop_->DeleteChannel(this);
+    loop_->deleteChannel(this);
     ::close(fd_);
     fd_ = -1;
   }
 }
 
-event_t Channel::GetListenEvent() const { return listen_event_; }
-event_t Channel::GetReadyEvent() const { return ready_event_; }
+event_t Channel::listenEvent() const { return listenEvent_; }
+event_t Channel::readyEvent() const { return readyEvent_; }
 
-bool Channel::IsInEpoll() const { return in_epoll_; }
-void Channel::SetInEpoll(bool in) { in_epoll_ = in; }
+bool Channel::isInEpoll() const { return in_epoll_; }
+void Channel::setInEpoll(bool in) { in_epoll_ = in; }
 
-void Channel::SetReadyEvents(event_t ev) { ready_event_ = ev; }
+void Channel::setReadyEvents(event_t ev) { readyEvent_ = ev; }
 
-void Channel::SetReadCallback(std::function<void()> callback) { read_callback_ = std::move(callback); }
-void Channel::SetWriteCallback(std::function<void()> callback) { write_callback_ = std::move(callback); }
+void Channel::setReadCallback(std::function<void()> callback) { read_callback_ = std::move(callback); }
+void Channel::setWriteCallback(std::function<void()> callback) { write_callback_ = std::move(callback); }
 
-void Channel::SetTCPConnectionPtr(std::shared_ptr<TCPConnection> conn) { tcp_connection_ptr_ = conn; }
+void Channel::setTCPConnection(std::shared_ptr<TCPConnection> conn) { tcpConnection_ = conn; }

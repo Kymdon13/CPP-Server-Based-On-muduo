@@ -14,6 +14,7 @@ extern thread_local pid_t t_cachedTid;
 extern thread_local char t_formattedTid[32];
 extern thread_local int t_formattedTidLength;
 
+// get thread id, if not cached, call syscall(SYS_gettid) to get it
 inline int gettid() {
   if (unlikely(t_cachedTid == -1)) {
     t_cachedTid = ::gettid();

@@ -18,7 +18,7 @@ class TimerQueue {
  private:
   using Entry = std::pair<TimeStamp, std::shared_ptr<Timer>>;
   // make sure the nullptr is the biggest
-  struct SharedPointerCompare {
+  struct Compare {
     bool operator()(const Entry &lhs, const Entry &rhs) const {
       if (lhs.first == rhs.first) {
         // make sure that nullptr is the biggest
@@ -39,7 +39,7 @@ class TimerQueue {
   const int timerfd_;
   Channel channel_;
   // Timer set sorted by 1.TimeStamp 2.Timer shared_ptr
-  std::set<Entry, SharedPointerCompare> timers_;
+  std::set<Entry, Compare> timers_;
   // for cancel purpose
   std::set<ActiveEntry> active_timers_;
   // consider the case that the timer is canceled in its own callback

@@ -6,10 +6,9 @@
 
 FileUtil::AppendFile::AppendFile(const std::string &path) : fp_(nullptr), written_bytes_(0) {
   std::filesystem::path filepath(path);
-  // create dir
   std::filesystem::create_directories(filepath.parent_path());
   fp_ = ::fopen(filepath.string().c_str(), "ae");
-  // set buffer for reducing io
+  // set buffer to reduce io
   ::setbuffer(fp_, buffer_, sizeof(buffer_));
 }
 

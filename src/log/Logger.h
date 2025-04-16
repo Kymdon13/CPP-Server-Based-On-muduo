@@ -48,8 +48,8 @@ class Logger {
   Wrapper wrapper_;
 
  public:
-  typedef std::function<void(const char *msg, int len)> OutputFunc;
-  typedef std::function<void()> FlushFunc;
+  typedef std::function<void(const char *msg, int len)> outputFunc;
+  typedef std::function<void()> flushFunc;
 
   Logger(SourceFile file, int line);
   Logger(SourceFile file, int line, LogLevel level);
@@ -62,8 +62,8 @@ class Logger {
   static LogLevel logLevel();
   static void setLogLevel(LogLevel level);
 
-  static void setOutput(OutputFunc fn);
-  static void setFlush(FlushFunc fn);
+  static void setOutput(outputFunc fn);
+  static void setFlush(flushFunc fn);
 };
 
 // you can use Logger::setLogLevel() to set the log level, those below the level will not be printed

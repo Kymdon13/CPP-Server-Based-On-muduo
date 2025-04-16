@@ -5,7 +5,7 @@
 #include <string>
 
 #include "Buffer.h"
-#include "base/cppserver-common.h"
+#include "base/common.h"
 #include "timer/TimeStamp.h"
 
 enum class TCPState : uint8_t { Invalid = 1, Connected, Disconnected, Closing };
@@ -18,19 +18,21 @@ class Channel;
 class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
  private:
   EventLoop *loop_;
-  int connection_fd_;
-  int connection_id_;
+  int fd_;
+  int id_;
   TCPState state_{TCPState::Invalid};
-  TimeStamp last_active_time_;
+
+  // timer
+  TimeStamp lastActive_;
   std::shared_ptr<Timer> timer_;
 
   // heap member belong to this object
   std::unique_ptr<Channel> channel_;
 
   // store data that readNonBlocking read
-  Buffer read_buffer_;
-  // store data that TCPConnection::Send hasn't sent
-  Buffer write_buffer_;
+  Buffer inBuffer_;
+  // store data that TCPConnection::send hasn't sent
+  Buffer outBuffer_;
 
   std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
@@ -38,12 +40,12 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
 
   // developer custom data
   void *context_{nullptr};
-  std::function<void(void*)> context_deleter_{nullptr};
+  std::function<void(void *)> contextDeleter_{nullptr};
 
   // FIXME(wzy) message boundary too simple
   /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
   void readNonBlocking();
-  /// @brief clear the read_buffer_ and read the msg to read_buffer_
+  /// @brief clear the inBuffer_ and read the msg to inBuffer_
   void read();
 
   /// @brief write asyncronously
@@ -52,49 +54,47 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPConnection);
-  TCPConnection(EventLoop *loop, int connection_fd, int connection_id);
+  TCPConnection(EventLoop *loop, int fd, int id);
   ~TCPConnection();
 
-  /// @brief register related Channel to the system epoll, init Channel::tcp_connection_ptr_
-  void EnableConnection();
+  /// @brief register related Channel to the system epoll, init Channel::tcpConnection_
+  void enableConnection();
 
-  void OnClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void OnConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void OnMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void onClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
 
-  /// @brief only set the write_buffer_, you have to call private method 'write()' to send it
-  void SetWriteBuffer(const char *msg);
+  /// @brief only set the outBuffer_, you have to call private method 'write()' to send it
+  void setOutBuffer(const char *msg);
 
-  /// @brief get what is inside the read_buffer_
-  Buffer *readBuffer() { return &read_buffer_; }
-  Buffer *writeBuffer() { return &write_buffer_; }
+  /// @brief get what is inside the inBuffer_
+  Buffer *inBuffer() { return &inBuffer_; }
+  Buffer *outBuffer() { return &outBuffer_; }
 
   /// @brief main sending interface for user
-  void Send(const std::string &msg);
-  void Send(const char *msg, size_t len);
+  void send(const std::string &msg);
+  void send(const char *msg, size_t len);
 
   /// @brief call on_close_callback_
-  void HandleClose();
+  void handleClose();
 
-  int GetFD() const;
-  int GetID() const;
-  TCPState GetConnectionState() const;
-  EventLoop *GetEventLoop() const;
-  Channel *GetChannel();
+  int fd() const;
+  int id() const;
+  TCPState connectionState() const;
+  EventLoop *eventLoop() const;
+  Channel *channel();
 
-  void RefreshTimeStamp();
-  TimeStamp GetLastActiveTime() const;
-  void SetTimer(std::shared_ptr<Timer> timer);
-  std::shared_ptr<Timer> GetTimer() const;
+  void refreshTimeStamp();
+  TimeStamp lastActive() const;
+  void setTimer(std::shared_ptr<Timer> timer);
+  std::shared_ptr<Timer> timer() const;
 
   // context_ related
   template <typename T>
-  void SetContext(T *context) {
+  void setContext(T *context) {
     context_ = context;
     // register deleter for a specific type
-    context_deleter_ = [](void *ptr) {
-      delete static_cast<T *>(ptr);
-    };
+    contextDeleter_ = [](void *ptr) { delete static_cast<T *>(ptr); };
   }
-  void *GetContext() { return context_; }
+  void *context() { return context_; }
 };
