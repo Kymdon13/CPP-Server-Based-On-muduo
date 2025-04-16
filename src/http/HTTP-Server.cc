@@ -7,8 +7,12 @@
 #include <utility>
 
 #include "HTTP-Connection.h"
+#include "HTTP-Context.h"
+#include "HTTP-Request.h"
+#include "HTTP-Response.h"
 #include "base/CurrentThread.h"
 #include "base/Exception.h"
+#include "base/Util.h"
 #include "log/Logger.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
@@ -17,11 +21,15 @@
 
 HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
   tcp_server_ = std::make_unique<TCPServer>(loop, ip, port);
+
   /**
    * set TCPServer::on_connection_callback_
    */
   tcp_server_->OnConnection([this](const std::shared_ptr<TCPConnection> &conn) {
     int fd_clnt = conn->GetFD();
+
+    // init the HTTPContext
+    conn->SetContext(new HTTPContext());
 
     // set timer for timeout close
     conn->SetTimer(loop_->RunEvery(CONNECTION_TIMEOUT_SECOND, [this, conn]() {
@@ -39,15 +47,6 @@ HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(
       }
     }));
 
-    // create HTTPConnection, and set its on_message_callback_
-    std::shared_ptr<HTTPConnection> http_conn = std::make_shared<HTTPConnection>(conn);
-    http_connection_map_[fd_clnt] = http_conn;
-    http_conn->OnResponse(on_response_callback_);
-
-    // set TCPConnection::on_message_callback_ through HTTPConnection, provides more customizability (you can customize
-    // the EnableHTTPConnection function, for example, set different message callback according to different ip)
-    http_conn->EnableHTTPConnection();
-
     // print out peer's info
     struct sockaddr_in addr_peer;
     socklen_t addrlength_peer = sizeof(addr_peer);
@@ -62,16 +61,88 @@ HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(
   });
 
   /**
-   * set TCPServer::on_close_callback_, erase HTTPConnection from http_connection_map_
+   * set TCPConnection::on_message_callback_
    */
-  tcp_server_->OnClose([this](const std::shared_ptr<TCPConnection> &conn) {
-    int fd_clnt = conn->GetFD();
-    auto it = http_connection_map_.find(fd_clnt);
-    if (it == http_connection_map_.end()) {
-      LOG_ERROR << "HTTPServer::HTTPServer, can't find fd: \"" << fd_clnt << "\" in http_connection_map_";
+  tcp_server_->OnMessage([this](const std::shared_ptr<TCPConnection> &conn) {
+    if (TCPState::Connected != conn->GetConnectionState()) {
+      LOG_WARN << "HTTPConnection::EnableHTTPConnection, on_message_callback_ called while disconnected";
       return;
     }
-    http_connection_map_.erase(fd_clnt);
+    using HTTPRequestParseState = HTTPContext::HTTPRequestParseState;
+    HTTPRequestParseState return_state;
+    HTTPContext *http_context_ = static_cast<HTTPContext *>(conn->GetContext());
+    return_state = http_context_->ParseRequest(conn->readBuffer()->peek(), conn->readBuffer()->readableBytes());
+    conn->readBuffer()->retrieveAll();
+    switch (return_state) {
+      case HTTPRequestParseState::COMPLETE: {
+        HTTPRequest *req = http_context_->GetHTTPRequest();
+        // check if client wish to keep the connection
+        std::string conn_state = req->GetHeaderByKey("Connection");
+        bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
+        // generate response
+        HTTPResponse res(is_clnt_want_to_close);
+        // set the response according to the request
+        on_response_callback_(http_context_->GetHTTPRequest(), &res);
+        // send message
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        // reset the state of the parser and the snapshot_
+        http_context_->ResetState();
+        // if the client wish to close connection
+        if (res.IsClose()) {
+          if (conn->GetConnectionState() == TCPState::Disconnected) {
+            break;
+          }
+          conn->HandleClose();
+        }
+        break;
+      }
+      // handle invalid cases
+      case HTTPRequestParseState::INVALID_METHOD: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid HTTP METHOD";
+        HTTPResponse res(false, HTTPResponse::HTTPStatus::NotImplemented);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        break;
+      }
+      case HTTPRequestParseState::INVALID_URL: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid URL";
+        HTTPResponse res(false, HTTPResponse::HTTPStatus::NotFound);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        break;
+      }
+      case HTTPRequestParseState::INVALID_PROTOCOL: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid PROTOCOL";
+        HTTPResponse res(false, HTTPResponse::HTTPStatus::HTTPVersionNotSupported);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        break;
+      }
+      case HTTPRequestParseState::INVALID_HEADER: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid HEADER";
+        HTTPResponse res(false, HTTPResponse::HTTPStatus::Forbidden);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        break;
+      }
+      case HTTPRequestParseState::INVALID_CRLF: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid CRLF";
+        HTTPResponse res(false, HTTPResponse::HTTPStatus::BadRequest);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        break;
+      }
+      // this one will close the connection
+      case HTTPRequestParseState::INVALID: {
+        LOG_INFO << "HTTPConnection::EnableHTTPConnection, just invalid";
+        HTTPResponse res(true, HTTPResponse::HTTPStatus::BadRequest);
+        conn->Send(res.GetResponse()->peek(), res.GetResponse()->readableBytes());
+        if (conn->GetConnectionState() == TCPState::Disconnected) {
+          break;
+        }
+        conn->HandleClose();
+        break;
+      }
+      // UNFINISHED, waiting for more data
+      default: {
+        break;
+      }
+    }
   });
 }
 

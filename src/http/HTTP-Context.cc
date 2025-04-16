@@ -8,9 +8,11 @@
 #include "HTTP-Request.h"
 #include "log/Logger.h"
 
-HTTPContext::HTTPContext() : state_(HTTPRequestParseState::START), content_length_(0) {
-  http_request_ = std::make_unique<HTTPRequest>();
-}
+HTTPContext::HTTPContext()
+    : content_length_(0),
+      state_(HTTPRequestParseState::START),
+      http_request_(std::make_unique<HTTPRequest>()),
+      snapshot_(std::make_unique<ParsingSnapshot>()) {}
 
 HTTPContext::~HTTPContext(){};
 
@@ -82,16 +84,15 @@ bool isInvalidHeaderKeyChar(const char &c) {
   }
 }
 
-HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, size_t size,
-                                                             parsingSnapshot *snapshot) {
+HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, size_t size) {
   const char *start, *cur, *end, *colon;
   std::string combined_request;
-  if (snapshot->parsingState__ > HTTPRequestParseState::INIT) {  // not completed
-    combined_request = snapshot->last_req__ + std::string(begin, size);
-    start = combined_request.c_str();           // point to left border
-    cur = start + snapshot->last_req__.size();  // point to beginning of the next request
+  if (snapshot_->parsingState__ > HTTPRequestParseState::INIT) {  // not completed
+    combined_request = snapshot_->last_req__ + std::string(begin, size);
+    start = combined_request.c_str();            // point to left border
+    cur = start + snapshot_->last_req__.size();  // point to beginning of the next request
     end = start + combined_request.size();
-    colon = start + snapshot->colon__;  // restore the position of colon
+    colon = start + snapshot_->colon__;  // restore the position of colon
   } else {
     start = begin;  // point to left border
     cur = start;    // point to right border
@@ -316,9 +317,12 @@ HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, 
     ++cur;
   }
   switch (state_) {
-    case HTTPRequestParseState::COMPLETE:
+    case HTTPRequestParseState::COMPLETE: {
+      // reset the state
+      snapshot_->parsingState__ = HTTPRequestParseState::INIT;
       return HTTPRequestParseState::COMPLETE;
       break;
+    }
     case HTTPRequestParseState::INVALID:
       return HTTPRequestParseState::INVALID;
       break;
@@ -339,14 +343,14 @@ HTTPContext::HTTPRequestParseState HTTPContext::ParseRequest(const char *begin, 
       break;
     default:
       // if the state is not complete, then we need to save the state
-      if (snapshot) {
-        snapshot->parsingState__ = state_;
-        snapshot->last_req__ = std::string(start, cur);
-        LOG_TRACE << "HTTPContext::ParseRequest: unfinished, last request: \"" << snapshot->last_req__ << '"';
+      if (snapshot_) {
+        snapshot_->parsingState__ = state_;
+        snapshot_->last_req__ = std::string(start, cur);
+        LOG_TRACE << "HTTPContext::ParseRequest: unfinished, last request: \"" << snapshot_->last_req__ << '"';
         if (colon != begin) {
-          snapshot->colon__ = colon - start;
+          snapshot_->colon__ = colon - start;
         } else {
-          snapshot->colon__ = 0;
+          snapshot_->colon__ = 0;
         }
       }
       return state_;

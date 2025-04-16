@@ -4,11 +4,11 @@
 
 #include <condition_variable>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <iostream>
 
 #include "LogStream.h"
 #include "Logger.h"

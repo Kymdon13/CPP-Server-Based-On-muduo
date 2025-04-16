@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "HTTP-Context.h"
 #include "base/cppserver-common.h"
 
 class TCPServer;
@@ -20,8 +21,6 @@ class HTTPServer {
   EventLoop *loop_;
   std::unique_ptr<TCPServer> tcp_server_;
   std::function<void(const HTTPRequest *, HTTPResponse *)> on_response_callback_;
-
-  std::unordered_map<int, std::shared_ptr<HTTPConnection>> http_connection_map_;
 
  public:
   DISABLE_COPYING_AND_MOVING(HTTPServer);

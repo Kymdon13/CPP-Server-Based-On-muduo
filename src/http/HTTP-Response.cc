@@ -74,17 +74,30 @@ std::shared_ptr<Buffer> HTTPResponse::GetResponse() {
   }
 
   // add other headers
-  before_body += "Content-Length: " + std::to_string(body_->readableBytes()) + "\r\n";
   for (const auto &header : headers_) {
     before_body += header.first + ": " + header.second + "\r\n";
   }
 
+  // if has body, add Content-Length
+  if (body_) {
+    before_body += "Content-Length: " + std::to_string(body_->readableBytes()) + "\r\n";
+  }
+
+  // message separator between header and body
   before_body += "\r\n";
 
   // construct response and add body
-  res_ = std::make_shared<Buffer>(before_body.size() + body_->readableBytes() + 2);  // +2 for \r\n
+  size_t len;
+  if (body_) {
+    len = before_body.size() + body_->readableBytes() + 2;  // +2 for \r\n
+  } else {
+    len = before_body.size() + 2;  // +2 for \r\n
+  }
+  res_ = std::make_shared<Buffer>(len);
   res_->append(before_body.c_str(), before_body.size());
-  res_->append(body_->peek(), body_->readableBytes());
+  if (body_) {
+    res_->append(body_->peek(), body_->readableBytes());
+  }
   res_->append("\r\n", 2);
 
   return res_;

@@ -113,7 +113,13 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
   // notice that we will call channel_->FlushEvent() in EnableConnection()
 }
 
-TCPConnection::~TCPConnection() { ::close(connection_fd_); }
+TCPConnection::~TCPConnection() {
+  ::close(connection_fd_);
+  if (context_deleter_ && context_) {
+    context_deleter_(context_);
+    context_ = nullptr;
+  }
+}
 
 void TCPConnection::EnableConnection() {
   state_ = TCPState::Connected;
@@ -121,7 +127,7 @@ void TCPConnection::EnableConnection() {
   if (on_connection_callback_) {
     on_connection_callback_(shared_from_this());
   }
-  // use epoll_ctl(EPOLL_CTL_ADD) to really start listening on events
+  // use epoll_ctl(EPOLL_CTL_ADD) to activate listening ability of Channel
   channel_->FlushEvent();
 }
 

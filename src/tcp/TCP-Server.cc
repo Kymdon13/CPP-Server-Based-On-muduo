@@ -45,7 +45,9 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
     conn->OnClose([this](std::shared_ptr<TCPConnection> conn) {
       loop_->CallOrQueue([this, conn]() {
         // developer defined close function, used to free self-defined resources
-        on_close_callback_(conn);
+        if (on_close_callback_) {
+          on_close_callback_(conn);
+        }
 
         std::cout << "tid-" << CurrentThread::gettid() << ": TCPServer::HandleClose" << std::endl;
         // remove the TCPConnection from the connection_map_

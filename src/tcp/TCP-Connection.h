@@ -27,6 +27,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   // heap member belong to this object
   std::unique_ptr<Channel> channel_;
 
+  // store data that readNonBlocking read
   Buffer read_buffer_;
   // store data that TCPConnection::Send hasn't sent
   Buffer write_buffer_;
@@ -34,6 +35,10 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
+
+  // developer custom data
+  void *context_{nullptr};
+  std::function<void(void*)> context_deleter_{nullptr};
 
   // FIXME(wzy) message boundary too simple
   /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
@@ -81,4 +86,15 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   TimeStamp GetLastActiveTime() const;
   void SetTimer(std::shared_ptr<Timer> timer);
   std::shared_ptr<Timer> GetTimer() const;
+
+  // context_ related
+  template <typename T>
+  void SetContext(T *context) {
+    context_ = context;
+    // register deleter for a specific type
+    context_deleter_ = [](void *ptr) {
+      delete static_cast<T *>(ptr);
+    };
+  }
+  void *GetContext() { return context_; }
 };

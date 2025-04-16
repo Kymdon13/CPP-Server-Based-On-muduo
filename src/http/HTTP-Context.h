@@ -19,7 +19,8 @@ class HTTPContext {
     INVALID_CRLF,
     COMPLETE,
 
-    INIT,  // if in this state, then we have no history request need to remember, after parse complete we will reset the state to INIT
+    INIT,  // if in this state, then we have no history request need to remember, after parse complete we will reset the
+           // state to INIT
 
     START,   // start parsing
     METHOD,  // request method
@@ -50,16 +51,17 @@ class HTTPContext {
     BODY
   };
 
-  struct parsingSnapshot {
+  struct ParsingSnapshot {
     std::string last_req__;
     HTTPContext::HTTPRequestParseState parsingState__ = HTTPRequestParseState::INIT;
     long colon__;
   };
 
  private:
-  std::unique_ptr<HTTPRequest> http_request_;
-  HTTPRequestParseState state_;
   int content_length_;
+  HTTPRequestParseState state_;
+  std::unique_ptr<HTTPRequest> http_request_;
+  std::unique_ptr<ParsingSnapshot> snapshot_;
 
  public:
   HTTPContext();
@@ -68,5 +70,5 @@ class HTTPContext {
   void ResetState();
   bool IsComplete();
   HTTPRequest *GetHTTPRequest();
-  HTTPRequestParseState ParseRequest(const char *begin, size_t size, parsingSnapshot *snapshot = nullptr);
+  HTTPRequestParseState ParseRequest(const char *begin, size_t size);
 };
