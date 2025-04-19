@@ -1,5 +1,6 @@
 #include "TCP-Server.h"
 
+#include <arpa/inet.h>
 #include <unistd.h>
 
 #include <iostream>
@@ -18,7 +19,7 @@
 
 #define MAX_CONN_ID 1000
 
-TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
+TCPServer::TCPServer(EventLoop* loop, const char* ip, const int port) : loop_(loop) {
   /**
    * init main reactor as Acceptor
    */
@@ -36,8 +37,7 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
     }
     // create TCPConnection (!!!note that TCPConnection must be held by a shared_ptr to enable the shared_from_this()
     // method), and dispatch it to a random subReactor
-    std::shared_ptr<TCPConnection> conn =
-        std::make_shared<TCPConnection>(threadPool_->getSubReactor(), fd, next_id_);
+    std::shared_ptr<TCPConnection> conn = std::make_shared<TCPConnection>(threadPool_->getSubReactor(), fd, next_id_);
 
     /**
      * set TCPConnecion::on_close_callback_
@@ -48,10 +48,15 @@ TCPServer::TCPServer(EventLoop *loop, const char *ip, const int port) : loop_(lo
         if (on_close_callback_) {
           on_close_callback_(conn);
         }
-
-        std::cout << "tid-" << CurrentThread::gettid() << ": TCPConnection::handleClose" << std::endl;
-        // remove the TCPConnection from the conn_map_
         int fd = conn->fd();
+
+        // print out peer's info
+        struct sockaddr_in addr_peer;
+        socklen_t addrlength_peer = sizeof(addr_peer);
+        getpeername(fd, (struct sockaddr*)&addr_peer, &addrlength_peer);
+        std::cout << "tid-" << CurrentThread::gettid() << ' ' << "[fd#" << fd << "] " << inet_ntoa(addr_peer.sin_addr)
+                  << ':' << ntohs(addr_peer.sin_port) << " Disconnected" << std::endl;
+        // remove the TCPConnection from the conn_map_
         auto it = conn_map_.find(fd);
         if (it == conn_map_.end()) {
           LOG_ERROR << "TCPServer::TCPServer, can not find fd: \"" << fd << "\" in conn_map_";

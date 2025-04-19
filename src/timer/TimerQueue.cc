@@ -10,7 +10,7 @@
 #include "log/Logger.h"
 #include "tcp/EventLoop.h"
 
-bool TimerQueue::insert(const std::shared_ptr<Timer> &timer) {
+bool TimerQueue::insert(const std::shared_ptr<Timer>& timer) {
   bool earliest = false;
   TimeStamp when = timer->expiration();
   auto it = timers_.begin();
@@ -33,15 +33,15 @@ std::vector<TimerQueue::Entry> TimerQueue::getExpired(TimeStamp now) {
   // erase the expired timers from the timers_ set
   timers_.erase(timers_.begin(), it);
   // erase the expired timers from the active_timers_ set
-  for (auto &entry : expired) {
+  for (auto& entry : expired) {
     active_timers_.erase(entry.second);
   }
   return expired;
 }
 
-void TimerQueue::reset(const std::vector<Entry> &expired, TimeStamp now) {
+void TimerQueue::reset(const std::vector<Entry>& expired, TimeStamp now) {
   // reset the timers
-  for (auto &entry : expired) {
+  for (auto& entry : expired) {
     auto timer = entry.second;
     // filter out the timers in the cancelingTimers_
     if (timer->isInterval() && cancelingTimers_.find(timer) == cancelingTimers_.end()) {
@@ -88,7 +88,7 @@ int createTimerfd() {
   return timerfd;
 }
 
-TimerQueue::TimerQueue(EventLoop *loop)
+TimerQueue::TimerQueue(EventLoop* loop)
     : loop_(loop), timerfd_(createTimerfd()), channel_(timerfd_, loop, true, false, false, false) {
   channel_.setReadCallback([this]() {
     TimeStamp now = TimeStamp::now();
@@ -104,7 +104,7 @@ TimerQueue::TimerQueue(EventLoop *loop)
     // call the timer callbacks
     is_doing_timer_callback_ = true;
     cancelingTimers_.clear();
-    for (auto &entry : expired) {
+    for (auto& entry : expired) {
       entry.second->run();
     }
     is_doing_timer_callback_ = false;
@@ -136,7 +136,7 @@ std::shared_ptr<Timer> TimerQueue::addTimer(TimeStamp when, double interval, std
   return timer;  // for the user to cancel the timer in the future
 }
 
-void TimerQueue::cancelTimer(const std::shared_ptr<Timer> &timer) {
+void TimerQueue::cancelTimer(const std::shared_ptr<Timer>& timer) {
   loop_->callOrQueue([this, timer]() {
     // remove the timer from the timers_ and active_timers_ set
     auto it = active_timers_.find(timer);

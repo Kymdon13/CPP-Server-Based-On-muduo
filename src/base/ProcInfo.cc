@@ -1,6 +1,6 @@
-#include <unistd.h>  // getpid, gethostname
-
 #include "ProcInfo.h"
+
+#include <unistd.h>  // getpid, gethostname
 
 pid_t ProcInfo::pid() { return ::getpid(); }
 

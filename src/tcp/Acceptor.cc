@@ -17,7 +17,7 @@
 #include "log/Logger.h"
 #include "tcp/TCP-Connection.h"
 
-Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), sockfd_(-1) {
+Acceptor::Acceptor(EventLoop* loop, const char* ip, int port) : loop_(loop), sockfd_(-1) {
   create();
   bind(ip, port);
   listen();
@@ -34,8 +34,7 @@ Acceptor::Acceptor(EventLoop *loop, const char *ip, int port) : loop_(loop), soc
     struct sockaddr_in addr_client;
     socklen_t addr_client_len = sizeof(addr_client);
     // accept the connection
-    int fd_client =
-        ::accept4(sockfd_, (struct sockaddr *)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    int fd_client = ::accept4(sockfd_, (struct sockaddr*)&addr_client, &addr_client_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (-1 == fd_client) LOG_SYSERR << "Acceptor::Acceptor, accept4 failed";
     // call on_new_connection_callback_
     on_new_connection_callback_(fd_client);
@@ -65,13 +64,13 @@ void Acceptor::create() {
   ::setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 }
 
-void Acceptor::bind(const char *ip, int port) {
+void Acceptor::bind(const char* ip, int port) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(ip);
   addr.sin_port = htons(port);
-  if (-1 == ::bind(sockfd_, (struct sockaddr *)&addr, sizeof(addr))) {
+  if (-1 == ::bind(sockfd_, (struct sockaddr*)&addr, sizeof(addr))) {
     LOG_SYSERR << "Acceptor::bind, bind failed";
     return;
   }
@@ -84,6 +83,12 @@ void Acceptor::listen() {
   }
   if (-1 == ::listen(sockfd_, SOMAXCONN)) {
     LOG_SYSERR << "Acceptor::listen, socket listened failed";
+  } else {
+    struct sockaddr_in addr_local;
+    socklen_t addrlength_local = sizeof(addr_local);
+    getsockname(sockfd_, (struct sockaddr*)&addr_local, &addrlength_local);
+    std::cout << "Acceptor::listen, listening on " << inet_ntoa(addr_local.sin_addr) << ":"
+              << ntohs(addr_local.sin_port) << std::endl;
   }
 }
 

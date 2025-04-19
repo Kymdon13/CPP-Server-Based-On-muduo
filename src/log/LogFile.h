@@ -20,7 +20,7 @@ class LogFile {
   const time_t period_;
 
   std::unique_ptr<FileUtil::AppendFile> file_;
-  static std::string getLogFileName(TimeStamp &now);
+  static std::string getLogFileName(TimeStamp& now);
 
  public:
   /// @brief write log to file
@@ -29,12 +29,12 @@ class LogFile {
   /// @param checkEveryN if we have written checkEveryN times and the writtenBytes still less than rollSize, we will
   /// flush the file
   /// @param period period in seconds
-  LogFile(const std::string &path,
+  LogFile(const std::string& path,
           size_t rollSize = 100 * 1024,  // 100KB
           int checkEveryN = 100, time_t period = 60 * 60 * 24);
   ~LogFile() = default;
 
-  void append(const char *logline, int len);
+  void append(const char* logline, int len);
   void flush() { file_->flush(); }
-  void rollFile(TimeStamp &now);
+  void rollFile(TimeStamp& now);
 };

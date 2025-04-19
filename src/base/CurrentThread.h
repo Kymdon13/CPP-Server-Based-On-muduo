@@ -23,7 +23,7 @@ inline int gettid() {
   return t_cachedTid;
 }
 
-inline const char *tidString() { return t_formattedTid; }
+inline const char* tidString() { return t_formattedTid; }
 inline int tidStringLength() { return t_formattedTidLength; }
 
 }  // namespace CurrentThread

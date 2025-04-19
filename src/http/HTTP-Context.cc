@@ -7,22 +7,29 @@
 
 #include "HTTP-Request.h"
 #include "log/Logger.h"
+#include "tcp/Buffer.h"
 
 HTTPContext::HTTPContext()
-    : contentLength_(0),
+    : contentLength_(-1),
       state_(ParseState::START),
       request_(std::make_unique<HTTPRequest>()),
       snapshot_(std::make_unique<ParsingSnapshot>()) {}
 
 HTTPContext::~HTTPContext(){};
 
-void HTTPContext::resetState() { state_ = ParseState::START; }
+void HTTPContext::reset() {
+  // reset the state
+  contentLength_ = -1;
+  state_ = ParseState::START;
+  request_ = std::make_unique<HTTPRequest>();
+  snapshot_->parseState__ = ParseState::START;
+}
 
 bool HTTPContext::isComplete() { return state_ == ParseState::COMPLETE; }
 
-HTTPRequest *HTTPContext::getRequest() { return request_.get(); }
+HTTPRequest* HTTPContext::getRequest() { return request_.get(); }
 
-bool isInvalidURLChar(const char &c) {
+bool isInvalidURLChar(const char& c) {
   // control characters
   if (c >= '\x00' && c <= '\x1F') return true;
   if (c == '\x7F') return true;
@@ -60,7 +67,7 @@ bool isInvalidURLChar(const char &c) {
       return false;
   }
 }
-bool isInvalidHeaderKeyChar(const char &c) {
+bool isInvalidHeaderKeyChar(const char& c) {
   // control characters
   if (c >= '\x00' && c <= '\x1F') return true;
   if (c == '\x7F') return true;
@@ -84,13 +91,20 @@ bool isInvalidHeaderKeyChar(const char &c) {
   }
 }
 
-HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size) {
+HTTPContext::ParseState HTTPContext::parseRequest(Buffer* buffer) {
+  // retrieve the data from buffer
+  const char* begin = buffer->peek();
+  size_t size = buffer->readableBytes();
+  buffer->retrieveAll();
+
   const char *start, *cur, *end, *colon;
   std::string combined_request;
-  if (snapshot_->parseState__ > ParseState::INIT) {  // not completed
-    combined_request = snapshot_->lastRequest__ + std::string(begin, size);
-    start = combined_request.c_str();            // point to left border
-    cur = start + snapshot_->lastRequest__.size();  // point to beginning of the next request
+  if (snapshot_->parseState__ > ParseState::START) {  // means not completed
+    combined_request =
+        snapshot_->lastRequest__ + std::string(begin, size);  // join the last request and current request
+    begin = combined_request.c_str();  // point to the left border
+    start = begin;                         // point to left border
+    cur = start + snapshot_->lastRequest__.size();            // point to beginning of the next request
     end = start + combined_request.size();
     colon = start + snapshot_->colon__;  // restore the position of colon
   } else {
@@ -280,13 +294,19 @@ HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size
       case ParseState::CR_LF_CR: {
         if (c == LF) {
           if (request_->headers().count("Content-Length")) {  // check if there is field "Content-Length"
-            if (contentLength_ = atoi(request_->getHeaderByKey("Content-Length").c_str()); contentLength_ > 0) {
+            if (contentLength_ = atoi(request_->getHeaderByKey("Content-Length").c_str()); contentLength_ < 0) {
+              state_ = ParseState::INVALID_HEADER;
+            } else if (cur - begin + 1 < static_cast<long>(size)) {  // contentLength_ >= 0 && more data
               state_ = ParseState::BODY;
-            } else {
-              state_ = ParseState::COMPLETE;
+            } else {                      // contentLength_ >= 0 && no more data
+              if (contentLength_ == 0) {  // contentLength_ == 0 && no more data
+                state_ = ParseState::COMPLETE;
+              } else {  // contentLength_ > 0 && no more data, break the loop and wait for more data
+                state_ = ParseState::BODY;
+              }
             }
-          } else {
-            if (cur - begin + 1 < static_cast<long>(size)) {  // if LF is the last char, then cur-begin = size-1
+          } else {                                            // no Content-Length
+            if (cur - begin + 1 < static_cast<long>(size)) {  // there is more data
               state_ = ParseState::BODY;
             } else {
               state_ = ParseState::COMPLETE;
@@ -299,30 +319,38 @@ HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size
         break;
       }
       case ParseState::BODY: {
-        state_ = ParseState::COMPLETE;
-        // if "Content-Length" is presented, use it as body length
-        size_t bodylength;
-        if (contentLength_ != 0) {
-          bodylength = std::min(static_cast<unsigned long>(contentLength_), (size - (cur - begin)));
-        } else {
-          bodylength = size - (cur - begin);
+        size_t bodyLength;
+        size_t left = size - (cur - begin);
+
+        if (contentLength_ > left) {  // there is more body to come, break the loop
+          contentLength_ -= left;
+          bodyLength = left;
+          cur = end - 1;                     // break the loop
+        } else if (contentLength_ < left) {  // there is more body than expected, next http request arrived already,
+                                             // write it back to buffer
+          state_ = ParseState::COMPLETE;
+          bodyLength = contentLength_;
+          buffer->append(start + bodyLength, left - contentLength_);  // write back the extra data
+        } else {  // contentLength_ == size - (cur - begin), complete parsing, this is also the case if Content-Length
+                  // is 0
+          state_ = ParseState::COMPLETE;
+          bodyLength = contentLength_;
         }
-        request_->setBody(std::string(start, start + bodylength));
+
+        request_->appendBody(std::string(start, start + bodyLength));
         break;
       }
-      default:
+      default: {
         state_ = ParseState::INVALID;
         break;
+      }
     }
     ++cur;
   }
   switch (state_) {
-    case ParseState::COMPLETE: {
-      // reset the state
-      snapshot_->parseState__ = ParseState::INIT;
+    case ParseState::COMPLETE:
       return ParseState::COMPLETE;
       break;
-    }
     case ParseState::INVALID:
       return ParseState::INVALID;
       break;
@@ -341,13 +369,18 @@ HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size
     case ParseState::INVALID_CRLF:
       return ParseState::INVALID_CRLF;
       break;
-    default:
+    default: {
       // if the state is not complete, then we need to save the state
-      if (snapshot_) {
-        snapshot_->parseState__ = state_;
+      snapshot_->parseState__ = state_;
+      if (state_ == ParseState::BODY) {
+        // if body parsing not completed, no need to save the start and colon pointer,
+        // this way we can speed up and save some memory
+        snapshot_->lastRequest__ = "";
+        snapshot_->colon__ = 0;
+      } else {
         snapshot_->lastRequest__ = std::string(start, cur);
         LOG_TRACE << "HTTPContext::parseRequest: unfinished, last request: \"" << snapshot_->lastRequest__ << '"';
-        if (colon != begin) {
+        if (colon != begin) {  // this means that we have at least one colon in the request
           snapshot_->colon__ = colon - start;
         } else {
           snapshot_->colon__ = 0;
@@ -355,5 +388,6 @@ HTTPContext::ParseState HTTPContext::parseRequest(const char *begin, size_t size
       }
       return state_;
       break;
+    }
   }
 }

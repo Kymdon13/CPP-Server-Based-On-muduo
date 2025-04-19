@@ -35,7 +35,7 @@ template <typename T>
 size_t convertInt(char buf[], T value) {
   bool is_negative = value < 0;
   T i = is_negative ? -value : value;
-  char *p = buf;
+  char* p = buf;
   do {
     int lsd = static_cast<int>(i % 10);  // lsd stands for 'least significant digit'
     i /= 10;
@@ -61,35 +61,35 @@ void LogStream::formatInteger(T val) {
 /**
  * integer types
  */
-LogStream &LogStream::operator<<(int v) {
+LogStream& LogStream::operator<<(int v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(unsigned int v) {
+LogStream& LogStream::operator<<(unsigned int v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(long v) {
+LogStream& LogStream::operator<<(long v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(unsigned long v) {
+LogStream& LogStream::operator<<(unsigned long v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(long long v) {
+LogStream& LogStream::operator<<(long long v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(unsigned long long v) {
+LogStream& LogStream::operator<<(unsigned long long v) {
   formatInteger(v);
   return *this;
 }
-LogStream &LogStream::operator<<(short v) {
+LogStream& LogStream::operator<<(short v) {
   *this << static_cast<int>(v);
   return *this;
 }
-LogStream &LogStream::operator<<(unsigned short v) {
+LogStream& LogStream::operator<<(unsigned short v) {
   *this << static_cast<unsigned int>(v);
   return *this;
 }
@@ -97,7 +97,7 @@ LogStream &LogStream::operator<<(unsigned short v) {
 /**
  * floating point types, use grisu3 to efficiently convert double to string
  */
-LogStream &LogStream::operator<<(double v) {
+LogStream& LogStream::operator<<(double v) {
   if (buffer_.avail() >= MAX_NUMERIC_SIZE) {
     // directly write to buffer_ without using append()
     size_t len = static_cast<size_t>(grisu3::dtoa_grisu3(v, buffer_.current()));
@@ -105,7 +105,7 @@ LogStream &LogStream::operator<<(double v) {
   }
   return *this;
 }
-LogStream &LogStream::operator<<(float v) {
+LogStream& LogStream::operator<<(float v) {
   *this << static_cast<double>(v);
   return *this;
 };
@@ -113,7 +113,7 @@ LogStream &LogStream::operator<<(float v) {
 const char digitsHex[] = "0123456789ABCDEF";
 size_t convertHex(char buf[], uintptr_t value) {
   uintptr_t i = value;
-  char *p = buf;
+  char* p = buf;
   do {
     int lsd = static_cast<int>(i % 16);
     i /= 16;
@@ -127,10 +127,10 @@ size_t convertHex(char buf[], uintptr_t value) {
 /**
  * unknown type
  */
-LogStream &LogStream::operator<<(const void *p) {
+LogStream& LogStream::operator<<(const void* p) {
   uintptr_t v = reinterpret_cast<uintptr_t>(p);
   if (buffer_.avail() >= FIXED_BUFFER_SIZE) {
-    char *buf = buffer_.current();
+    char* buf = buffer_.current();
     buf[0] = '0';
     buf[1] = 'x';
     size_t len = convertHex(buf + 2, v);

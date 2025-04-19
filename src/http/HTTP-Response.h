@@ -40,17 +40,15 @@ class HTTPResponse {
   ~HTTPResponse() {}
 
   void setStatus(Status status) { status_ = status; }
-  void setContentType(ContentType content_type) {
-    addHeader("Content-Type", contentTypeToString(content_type));
-  }
-  void addHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
+  void setContentType(ContentType content_type) { addHeader("Content-Type", contentTypeToString(content_type)); }
+  void addHeader(const std::string& key, const std::string& value) { headers_[key] = value; }
   void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
   bool isClose() { return close_; }
   void setClose(bool close) { close_ = close; }
 
   // path to store static files, must be absolute path
   static std::string staticPath();
-  static void setStaticPath(const std::string &path);
+  static void setStaticPath(const std::string& path);
 
   static std::string statusToString(Status stat);
   static std::string contentTypeToString(ContentType type);

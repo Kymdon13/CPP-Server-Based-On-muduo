@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-inline void errorif(bool condition, const char *errmsg) {
+inline void errorif(bool condition, const char* errmsg) {
   if (condition) {
     std::string prefix = "errorif: ";
     std::string msg = prefix + errmsg;
@@ -14,7 +14,7 @@ inline void errorif(bool condition, const char *errmsg) {
   }
 }
 
-inline void warnif(bool condition, const char *wrnmsg) {
+inline void warnif(bool condition, const char* wrnmsg) {
   if (condition) {
     std::string prefix = "warnif: ";
     std::string msg = prefix + wrnmsg;
@@ -26,12 +26,12 @@ enum class ExceptionType { INVALID = 0, INVALID_SOCKET };
 
 class Exception : public std::runtime_error {
  public:
-  explicit Exception(const std::string &msg) : std::runtime_error(msg), type_(ExceptionType::INVALID) {
+  explicit Exception(const std::string& msg) : std::runtime_error(msg), type_(ExceptionType::INVALID) {
     std::string exception_msg = "Message :: " + msg + '\n';
     std::cerr << exception_msg;
   }
 
-  Exception(ExceptionType type, const std::string &msg) : std::runtime_error(msg), type_(type) {
+  Exception(ExceptionType type, const std::string& msg) : std::runtime_error(msg), type_(type) {
     std::string exception_msg = "Exception Type :: " + ExceptionTypeToString(type_) + "\nMessage :: " + msg + '\n';
     std::cerr << exception_msg;
   }

@@ -24,7 +24,7 @@
 #define MIN_TARGET_EXP -60
 #define MASK32 0xFFFFFFFFULL
 
-#define CAST_U64(d) (*(uint64_t *)&d)
+#define CAST_U64(d) (*(uint64_t*)&d)
 #define MIN(x, y) ((x) <= (y) ? (x) : (y))
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 
@@ -74,7 +74,7 @@ static const power pow_cache[] = {
     {0xbf21e44003acdd2dULL, 933, 300},    {0x8e679c2f5e44ff8fULL, 960, 308},    {0xd433179d9c8cb841ULL, 986, 316},
     {0x9e19db92b4e31ba9ULL, 1013, 324},   {0xeb96bf6ebadf77d9ULL, 1039, 332},   {0xaf87023b9bf0ee6bULL, 1066, 340}};
 
-static int cached_pow(int exp, diy_fp *p) {
+static int cached_pow(int exp, diy_fp* p) {
   int k = (int)ceil((exp + DIYFP_FRACT_SIZE - 1) * D_1_LOG2_10);
   int i = (k - MIN_CACHED_EXP - 1) / CACHED_EXP_STEP + 1;
   p->f = pow_cache[i].fract;
@@ -138,14 +138,14 @@ static diy_fp double2diy_fp(double d) {
 static const unsigned int pow10_cache[] = {0,      1,       10,       100,       1000,      10000,
                                            100000, 1000000, 10000000, 100000000, 1000000000};
 
-static int largest_pow10(uint32_t n, int n_bits, uint32_t *power) {
+static int largest_pow10(uint32_t n, int n_bits, uint32_t* power) {
   int guess = ((n_bits + 1) * 1233 >> 12) + 1 /*skip first entry*/;
   if (n < pow10_cache[guess]) --guess;  // We don't have any guarantees that 2^n_bits <= n.
   *power = pow10_cache[guess];
   return guess;
 }
 
-static int round_weed(char *buffer, int len, uint64_t wp_W, uint64_t delta, uint64_t rest, uint64_t ten_kappa,
+static int round_weed(char* buffer, int len, uint64_t wp_W, uint64_t delta, uint64_t rest, uint64_t ten_kappa,
                       uint64_t ulp) {
   uint64_t wp_Wup = wp_W - ulp;
   uint64_t wp_Wdown = wp_W + ulp;
@@ -161,7 +161,7 @@ static int round_weed(char *buffer, int len, uint64_t wp_W, uint64_t delta, uint
   return 2 * ulp <= rest && rest <= delta - 4 * ulp;
 }
 
-static int digit_gen(diy_fp low, diy_fp w, diy_fp high, char *buffer, int *length, int *kappa) {
+static int digit_gen(diy_fp low, diy_fp w, diy_fp high, char* buffer, int* length, int* kappa) {
   uint64_t unit = 1;
   diy_fp too_low = {low.f - unit, low.e};
   diy_fp too_high = {high.f + unit, high.e};
@@ -202,7 +202,7 @@ static int digit_gen(diy_fp low, diy_fp w, diy_fp high, char *buffer, int *lengt
   }
 }
 
-static int grisu3(double v, char *buffer, int *length, int *d_exp) {
+static int grisu3(double v, char* buffer, int* length, int* d_exp) {
   int mk, kappa, success;
   diy_fp dfp = double2diy_fp(v);
   diy_fp w = normalize_diy_fp(dfp);
@@ -236,9 +236,9 @@ static int grisu3(double v, char *buffer, int *length, int *d_exp) {
   return success;
 }
 
-int u32_to_string(uint32_t val, char *str) {
+int u32_to_string(uint32_t val, char* str) {
   assert(str);
-  char *s = str;
+  char* s = str;
   for (;;) {
     int ni = val / 10;
     int digit = val - ni * 10;
@@ -257,7 +257,7 @@ int u32_to_string(uint32_t val, char *str) {
   return (int)(s - str);
 }
 
-int i32_to_string(int i, char *str) {
+int i32_to_string(int i, char* str) {
   assert(str);
   if (i < 0) {
     *str++ = '-';
@@ -270,10 +270,10 @@ int i32_to_string(int i, char *str) {
   return u32_to_string((uint32_t)i, str);
 }
 
-int dtoa_grisu3(double v, char *dst) {
+int dtoa_grisu3(double v, char* dst) {
   int d_exp, len, success, decimals, i;
   uint64_t u64 = CAST_U64(v);
-  char *s2 = dst;
+  char* s2 = dst;
   assert(dst);
 
   // Prehandle NaNs

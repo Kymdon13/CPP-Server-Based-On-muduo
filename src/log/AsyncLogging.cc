@@ -1,6 +1,7 @@
+#include "AsyncLogging.h"
+
 #include <assert.h>
 
-#include "AsyncLogging.h"
 #include "LogFile.h"
 #include "LogStream.h"
 
@@ -36,7 +37,7 @@ void AsyncLogging::threadFunc() {
       }
     }
     // write the buffers to the file
-    for (const auto &buffer : buffersToWrite) {
+    for (const auto& buffer : buffersToWrite) {
       output.append(buffer->data(), buffer->length());
     }
     // recover the buffers
@@ -61,7 +62,7 @@ void AsyncLogging::threadFunc() {
   output.flush();
 }
 
-AsyncLogging::AsyncLogging(const std::string &dir, size_t rollSize, time_t flushInterval)
+AsyncLogging::AsyncLogging(const std::string& dir, size_t rollSize, time_t flushInterval)
     : running_(true),
       dir_(dir),
       rollSize_(rollSize),
@@ -76,7 +77,7 @@ AsyncLogging::~AsyncLogging() {
   }
 }
 
-void AsyncLogging::append(const char *logline, int len) {
+void AsyncLogging::append(const char* logline, int len) {
   std::unique_lock<std::mutex> lock(mutex_);
   // if the current buffer is not full, we will append the logline to the current buffer
   if (currentBuffer_->avail() > len) {

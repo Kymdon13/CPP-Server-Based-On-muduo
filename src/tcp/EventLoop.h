@@ -37,8 +37,8 @@ class EventLoop {
   void quit();
 
   void loop();
-  void updateChannel(Channel *channel) const;
-  void deleteChannel(Channel *channel) const;
+  void updateChannel(Channel* channel) const;
+  void deleteChannel(Channel* channel) const;
 
   /// @brief check if it is the thread that created this EventLoop
   bool isLocalThread();
@@ -48,5 +48,5 @@ class EventLoop {
   std::shared_ptr<Timer> runAt(TimeStamp time, std::function<void()> cb);
   std::shared_ptr<Timer> runAfter(double delay, std::function<void()> cb);
   std::shared_ptr<Timer> runEvery(double interval, std::function<void()> cb);
-  void canelTimer(const std::shared_ptr<Timer> &timer);
+  void canelTimer(const std::shared_ptr<Timer>& timer);
 };

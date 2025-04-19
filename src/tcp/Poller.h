@@ -19,8 +19,8 @@ class Poller {
   Poller();
   ~Poller();
 
-  std::vector<Channel *> Poll(int timeout = -1) const;
+  std::vector<Channel*> Poll(int timeout = -1) const;
 
-  void updateChannel(Channel *channel) const;
-  void deleteChannel(Channel *channel) const;
+  void updateChannel(Channel* channel) const;
+  void deleteChannel(Channel* channel) const;
 };

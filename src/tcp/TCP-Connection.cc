@@ -42,7 +42,6 @@ void TCPConnection::readNonBlocking() {
     }
   }
 }
-void TCPConnection::read() { readNonBlocking(); }
 
 int TCPConnection::writeNonBlocking() {
   ssize_t sent = ::write(fd_, outBuffer_.peek(), outBuffer_.readableBytes());
@@ -61,12 +60,8 @@ int TCPConnection::writeNonBlocking() {
   return 1;
 }
 
-TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_id)
-    : loop_(loop),
-      fd_(connection_fd),
-      id_(connection_id),
-      lastActive_(TimeStamp::now()),
-      timer_(nullptr) {
+TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_id)
+    : loop_(loop), fd_(connection_fd), id_(connection_id), lastActive_(TimeStamp::now()), timer_(nullptr) {
   if (nullptr == loop) {
     throw std::invalid_argument("EventLoop is nullptr.");
   }
@@ -78,7 +73,7 @@ TCPConnection::TCPConnection(EventLoop *loop, int connection_fd, int connection_
    */
   channel_->setReadCallback([this]() {
     refreshTimeStamp();
-    read();
+    readNonBlocking();
     if (state_ == TCPState::Disconnected) {
       return;
     }
@@ -131,18 +126,8 @@ void TCPConnection::enableConnection() {
   channel_->flushEvent();
 }
 
-void TCPConnection::onClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
-  on_close_callback_ = std::move(func);
-}
-void TCPConnection::onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
-  on_connection_callback_ = std::move(func);
-}
-void TCPConnection::onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
-  on_message_callback_ = std::move(func);
-}
-
-void TCPConnection::send(const std::string &msg) { send(msg.c_str(), msg.size()); }
-void TCPConnection::send(const char *msg, size_t len) {
+void TCPConnection::send(const std::string& msg) { send(msg.c_str(), msg.size()); }
+void TCPConnection::send(const char* msg, size_t len) {
   int left = len;
   if (state_ == TCPState::Disconnected) {
     LOG_WARN << "TCPConnection::send called while the TCPConnection::state_ == TCPState::Disconnected";
@@ -183,13 +168,12 @@ void TCPConnection::handleClose() {
   }
 }
 
-int TCPConnection::fd() const { return fd_; }
-int TCPConnection::id() const { return id_; }
-TCPState TCPConnection::connectionState() const { return state_; }
-EventLoop *TCPConnection::eventLoop() const { return loop_; }
-Channel *TCPConnection::channel() { return channel_.get(); }
-
-void TCPConnection::refreshTimeStamp() { lastActive_ = TimeStamp::now(); }
-TimeStamp TCPConnection::lastActive() const { return lastActive_; }
-void TCPConnection::setTimer(std::shared_ptr<Timer> timer) { timer_ = std::move(timer); }
-std::shared_ptr<Timer> TCPConnection::timer() const { return timer_; }
+void TCPConnection::onClose(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+  on_close_callback_ = std::move(func);
+}
+void TCPConnection::onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+  on_connection_callback_ = std::move(func);
+}
+void TCPConnection::onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func) {
+  on_message_callback_ = std::move(func);
+}

@@ -6,6 +6,7 @@
 #define CR '\r'
 #define LF '\n'
 
+class Buffer;
 class HTTPRequest;
 
 class HTTPContext {
@@ -19,10 +20,7 @@ class HTTPContext {
     INVALID_CRLF,
     COMPLETE,
 
-    INIT,  // if in this state, then we have no history request need to remember, after parse complete we will reset the
-           // state to INIT
-
-    START,   // start parsing
+    START,   // start parsing, after parse complete we will reset the state to START
     METHOD,  // request method
 
     BEFORE_URL,  // report INVALID_URL if not start with '/'
@@ -52,13 +50,14 @@ class HTTPContext {
   };
 
   struct ParsingSnapshot {
+    // TODO(wzy) replace lastRequest__ with vector may be more efficient?
     std::string lastRequest__;
-    HTTPContext::ParseState parseState__ = ParseState::INIT;
+    HTTPContext::ParseState parseState__ = ParseState::START;
     long colon__;
   };
 
  private:
-  int contentLength_;
+  size_t contentLength_;
   ParseState state_;
   std::unique_ptr<HTTPRequest> request_;
   std::unique_ptr<ParsingSnapshot> snapshot_;
@@ -67,8 +66,8 @@ class HTTPContext {
   HTTPContext();
   ~HTTPContext();
 
-  void resetState();
+  void reset();
   bool isComplete();
-  HTTPRequest *getRequest();
-  ParseState parseRequest(const char *begin, size_t size);
+  HTTPRequest* getRequest();
+  ParseState parseRequest(Buffer* buffer);
 };

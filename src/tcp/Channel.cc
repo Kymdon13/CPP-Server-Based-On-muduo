@@ -18,7 +18,7 @@ void Channel::updateEvent(event_t event, bool enable) {
   flushable_ = true;
 }
 
-Channel::Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET, bool is_connection)
+Channel::Channel(int fd, EventLoop* loop, bool enableReading, bool enableWriting, bool useET, bool is_connection)
     : fd_(fd), loop_(loop), listenEvent_(0), readyEvent_(0), isConnection_(is_connection) {
   // set listenEvent_
   if (enableReading) {

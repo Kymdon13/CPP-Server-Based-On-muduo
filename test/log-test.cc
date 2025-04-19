@@ -11,7 +11,7 @@ int main() {
   os.resetBuffer();
   os.bzeroBuffer();
 
-  const char *str[3] = {"hello", "world", "!"};
+  const char* str[3] = {"hello", "world", "!"};
   os << str[1];
   std::cout << os.buffer().data() << std::endl;
   os.resetBuffer();

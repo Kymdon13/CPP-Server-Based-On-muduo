@@ -13,7 +13,7 @@ class TCPConnection;
 class Channel {
  private:
   int fd_;
-  EventLoop *loop_;
+  EventLoop* loop_;
   event_t listenEvent_;
   event_t readyEvent_;
   bool in_epoll_{false};
@@ -31,7 +31,7 @@ class Channel {
 
  public:
   DISABLE_COPYING_AND_MOVING(Channel);
-  Channel(int fd, EventLoop *loop, bool enableReading, bool enableWriting, bool useET, bool is_connection);
+  Channel(int fd, EventLoop* loop, bool enableReading, bool enableWriting, bool useET, bool is_connection);
   ~Channel();
 
   /// @brief call epoll_ctl

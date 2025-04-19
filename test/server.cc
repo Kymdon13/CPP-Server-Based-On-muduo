@@ -21,7 +21,7 @@
 #include "tcp/Thread.h"
 #include "tcp/ThreadPool.h"
 
-void HTTPResponseCallback(const HTTPRequest *req, HTTPResponse *res) {
+void HTTPResponseCallback(const HTTPRequest* req, HTTPResponse* res) {
   std::string url = req->url();
   LOG_TRACE << "HTTP request: " << '"' << url << '"';
   if (req->method() == HTTPRequest::Method::GET) {
@@ -49,11 +49,11 @@ void HTTPResponseCallback(const HTTPRequest *req, HTTPResponse *res) {
 }
 
 int main() {
-  std::shared_ptr<AsyncLogging> async_logging = AsyncLogging::init("log/single-client");
-  async_logging->start();
+  // std::shared_ptr<AsyncLogging> async_logging = AsyncLogging::init("log/single-client");
+  // async_logging->start();
 
-  EventLoop *loop = new EventLoop();
-  HTTPServer *server = new HTTPServer(loop, "0.0.0.0", 5000);
+  EventLoop* loop = new EventLoop();
+  HTTPServer* server = new HTTPServer(loop, "0.0.0.0", 5000);
   server->onResponse(HTTPResponseCallback);
   server->start();
 

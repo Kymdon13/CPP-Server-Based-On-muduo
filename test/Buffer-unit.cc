@@ -1,4 +1,5 @@
 #include <assert.h>
+
 #include <iostream>
 #include <string>
 
@@ -64,7 +65,7 @@ void benchmarkBuffer() {
   Buffer buffer(1024);
   // one iteration
   buffer.append(test_string.c_str(), test_string.size());
-  const char *c = buffer.peek();
+  const char* c = buffer.peek();
   // simulate data reading
   char tmp;
   for (size_t i = 0; i < buffer.readableBytes(); ++i) {

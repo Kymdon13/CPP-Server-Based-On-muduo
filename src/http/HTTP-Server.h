@@ -8,8 +8,8 @@
 
 #include "HTTP-Context.h"
 #include "base/common.h"
+#include "tcp/TCP-Server.h"
 
-class TCPServer;
 class TCPConnection;
 class HTTPRequest;
 class HTTPResponse;
@@ -18,16 +18,16 @@ class EventLoop;
 
 class HTTPServer {
  private:
-  EventLoop *loop_;
+  EventLoop* loop_;
   std::unique_ptr<TCPServer> tcpServer_;
-  std::function<void(const HTTPRequest *, HTTPResponse *)> on_response_callback_;
+  std::function<void(const HTTPRequest*, HTTPResponse*)> on_response_callback_;
 
  public:
   DISABLE_COPYING_AND_MOVING(HTTPServer);
-  HTTPServer(EventLoop *loop, const char *ip, const int port);
-  ~HTTPServer();
+  HTTPServer(EventLoop* loop, const char* ip, const int port);
+  ~HTTPServer() {}
 
-  void onResponse(std::function<void(const HTTPRequest *, HTTPResponse *)> cb);
+  void onResponse(std::function<void(const HTTPRequest*, HTTPResponse*)> cb) { on_response_callback_ = std::move(cb); }
 
-  void start();
+  void start() { tcpServer_->start(); }
 };

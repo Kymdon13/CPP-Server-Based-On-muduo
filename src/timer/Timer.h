@@ -16,7 +16,7 @@ class Timer {
 
  public:
   DISABLE_COPYING_AND_MOVING(Timer);
-  Timer(TimeStamp timestamp, double interval, const std::function<void()> &cb);
+  Timer(TimeStamp timestamp, double interval, const std::function<void()>& cb);
 
   void restart(TimeStamp now);
 

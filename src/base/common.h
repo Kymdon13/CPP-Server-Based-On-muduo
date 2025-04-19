@@ -2,12 +2,12 @@
 
 // Macros to disable copying and moving semantics
 #define DISABLE_COPYING(cls) \
-  cls(const cls &) = delete; \
-  cls &operator=(const cls &) = delete;
+  cls(const cls&) = delete;  \
+  cls& operator=(const cls&) = delete;
 
 #define DISABLE_MOVING(cls) \
-  cls(cls &&) = delete;     \
-  cls &operator=(cls &&) = delete;
+  cls(cls&&) = delete;      \
+  cls& operator=(cls&&) = delete;
 
 #define DISABLE_COPYING_AND_MOVING(cls) \
   DISABLE_COPYING(cls);                 \

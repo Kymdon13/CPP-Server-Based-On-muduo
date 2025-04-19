@@ -17,11 +17,11 @@ class Logger {
 
   // a simple struct to store the filename and its size
   typedef struct SourceFile {
-    const char *filename_;
+    const char* filename_;
     int size_;
-    SourceFile(const char *filename) : filename_(filename) {
+    SourceFile(const char* filename) : filename_(filename) {
       // last_slash points to the last '/' in the filename
-      const char *last_slash = strrchr(filename, '/');
+      const char* last_slash = strrchr(filename, '/');
       if (last_slash) {  // if find '/'
         filename_ = last_slash + 1;
       }
@@ -32,7 +32,7 @@ class Logger {
   // a wrapper to output formatted log messages
   class Wrapper {
    public:
-    Wrapper(LogLevel level, const SourceFile &file, int line);
+    Wrapper(LogLevel level, const SourceFile& file, int line);
 
     void formatTime();
     void finish() { stream_ << '\n'; }
@@ -48,16 +48,16 @@ class Logger {
   Wrapper wrapper_;
 
  public:
-  typedef std::function<void(const char *msg, int len)> outputFunc;
+  typedef std::function<void(const char* msg, int len)> outputFunc;
   typedef std::function<void()> flushFunc;
 
   Logger(SourceFile file, int line);
   Logger(SourceFile file, int line, LogLevel level);
-  Logger(SourceFile file, int line, LogLevel level, const char *func);
+  Logger(SourceFile file, int line, LogLevel level, const char* func);
   Logger(SourceFile file, int line, bool toAbort);
   ~Logger();
 
-  LogStream &stream() { return wrapper_.stream_; }
+  LogStream& stream() { return wrapper_.stream_; }
 
   static LogLevel logLevel();
   static void setLogLevel(LogLevel level);

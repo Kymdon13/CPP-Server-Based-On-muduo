@@ -35,31 +35,33 @@ class HTTPRequest {
   HTTPRequest();
   ~HTTPRequest();
 
-  void setVersion(const std::string &version);
+  void setVersion(const std::string& version);
   Version version() const;
   std::string versionAsString() const;
 
-  bool setMethod(const std::string &method);
+  bool setMethod(const std::string& method);
   Method method() const;
   std::string methodAsString() const;
 
   void setUrl(std::string url);
-  const std::string &url() const;
+  const std::string& url() const;
 
-  void addParam(const std::string &key, const std::string &value);
-  std::string getParamByKey(const std::string &key) const;
+  void addParam(const std::string& key, const std::string& value);
+  std::string getParamByKey(const std::string& key) const;
   // return the raw map of <key, value> of request params
-  const std::unordered_map<std::string, std::string> &params() const;
+  const std::unordered_map<std::string, std::string>& params() const;
 
   void setProtocol(std::string protocol);
-  const std::string &protocol() const;
+  const std::string& protocol() const;
 
-  void addHeader(const std::string &field, const std::string &value);
-  std::string getHeaderByKey(const std::string &field) const;
-  const std::unordered_map<std::string, std::string> &headers() const;
+  void addHeader(const std::string& field, const std::string& value);
+  std::string getHeaderByKey(const std::string& field) const;
+  const std::unordered_map<std::string, std::string>& headers() const;
 
-  void setBody(std::string body);
-  const std::string &body() const;
+  void setBody(const std::string& body);
+  void setBody(std::string&& body);
+  void appendBody(std::string&& body);
+  const std::string& body() const;
 
  private:
   Method method_{Method::Invalid};

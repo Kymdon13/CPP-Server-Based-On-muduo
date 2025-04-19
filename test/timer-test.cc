@@ -1,14 +1,16 @@
+#include "timer/Timer.h"
+
 #include <sys/timerfd.h>
 #include <unistd.h>
+
 #include <iostream>
 
 #include "tcp/EventLoop.h"
 #include "timer/TimeStamp.h"
-#include "timer/Timer.h"
 #include "timer/TimerQueue.h"
 
 int main() {
-  EventLoop *loop = new EventLoop();
+  EventLoop* loop = new EventLoop();
   TimeStamp now = TimeStamp::now();
   std::cout << "Current Time: " << now.formattedString() << std::endl;
 

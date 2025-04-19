@@ -25,13 +25,16 @@ Poller::~Poller() {
   }
 }
 
-std::vector<Channel *> Poller::Poll(int timeout) const {
-  std::vector<Channel *> ready_channels;
-  int nfds = epoll_wait(epollfd_, events_.get(), MAX_EVENTS, timeout);  // get ready events
+std::vector<Channel*> Poller::Poll(int timeout) const {
+  std::vector<Channel*> ready_channels;
+  int nfds = 0;
+  do {
+    nfds = epoll_wait(epollfd_, events_.get(), MAX_EVENTS, timeout);  // get ready events
+  } while (nfds == -1 && errno == EINTR);
   if (-1 == nfds) LOG_SYSERR << "epoll_wait() error";
   // fetch Channels from epoll_events and put them in a vector
   for (int i = 0; i < nfds; ++i) {
-    Channel *ch = (Channel *)events_[i].data.ptr;
+    Channel* ch = (Channel*)events_[i].data.ptr;
     event_t ev = events_[i].events;
     ch->setReadyEvents(ev);
     ready_channels.emplace_back(ch);
@@ -39,7 +42,7 @@ std::vector<Channel *> Poller::Poll(int timeout) const {
   return ready_channels;
 }
 
-void Poller::updateChannel(Channel *channel) const {
+void Poller::updateChannel(Channel* channel) const {
   int sockfd = channel->fd();
   struct epoll_event ev {};
   ev.data.ptr = channel;
@@ -57,7 +60,7 @@ void Poller::updateChannel(Channel *channel) const {
   }
 }
 
-void Poller::deleteChannel(Channel *channel) const {
+void Poller::deleteChannel(Channel* channel) const {
   int sockfd = channel->fd();
   if (-1 == epoll_ctl(epollfd_, EPOLL_CTL_DEL, sockfd, nullptr)) {
     LOG_SYSERR << "epoll_ctl(EPOLL_CTL_DEL) error";

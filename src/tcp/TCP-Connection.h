@@ -17,7 +17,7 @@ class Channel;
 
 class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
  private:
-  EventLoop *loop_;
+  EventLoop* loop_;
   int fd_;
   int id_;
   TCPState state_{TCPState::Invalid};
@@ -39,14 +39,12 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   std::function<void(std::shared_ptr<TCPConnection>)> on_message_callback_;
 
   // developer custom data
-  void *context_{nullptr};
-  std::function<void(void *)> contextDeleter_{nullptr};
+  void* context_{nullptr};
+  std::function<void(void*)> contextDeleter_{nullptr};
 
   // FIXME(wzy) message boundary too simple
   /// @brief read as fast as it can, message boundary is simply when bytes_read == 0
   void readNonBlocking();
-  /// @brief clear the inBuffer_ and read the msg to inBuffer_
-  void read();
 
   /// @brief write asyncronously
   /// @return 0 if write nothing, -1 if error, >0 if write success
@@ -54,47 +52,47 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
 
  public:
   DISABLE_COPYING_AND_MOVING(TCPConnection);
-  TCPConnection(EventLoop *loop, int fd, int id);
+  TCPConnection(EventLoop* loop, int fd, int id);
   ~TCPConnection();
 
   /// @brief register related Channel to the system epoll, init Channel::tcpConnection_
   void enableConnection();
 
-  void onClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
-  void onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
-
   /// @brief only set the outBuffer_, you have to call private method 'write()' to send it
-  void setOutBuffer(const char *msg);
+  void setOutBuffer(const char* msg);
 
   /// @brief get what is inside the inBuffer_
-  Buffer *inBuffer() { return &inBuffer_; }
-  Buffer *outBuffer() { return &outBuffer_; }
+  Buffer* inBuffer() { return &inBuffer_; }
+  Buffer* outBuffer() { return &outBuffer_; }
 
   /// @brief main sending interface for user
-  void send(const std::string &msg);
-  void send(const char *msg, size_t len);
+  void send(const std::string& msg);
+  void send(const char* msg, size_t len);
 
   /// @brief call on_close_callback_
   void handleClose();
 
-  int fd() const;
-  int id() const;
-  TCPState connectionState() const;
-  EventLoop *eventLoop() const;
-  Channel *channel();
+  void onClose(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void onConnection(std::function<void(std::shared_ptr<TCPConnection>)> func);
+  void onMessage(std::function<void(std::shared_ptr<TCPConnection>)> func);
 
-  void refreshTimeStamp();
-  TimeStamp lastActive() const;
-  void setTimer(std::shared_ptr<Timer> timer);
-  std::shared_ptr<Timer> timer() const;
+  int fd() const { return fd_; }
+  int id() const { return id_; }
+  TCPState connectionState() const { return state_; }
+  EventLoop* eventLoop() const { return loop_; }
+  Channel* channel() { return channel_.get(); }
+
+  void refreshTimeStamp() { lastActive_ = TimeStamp::now(); }
+  TimeStamp lastActive() const { return lastActive_; }
+  void setTimer(std::shared_ptr<Timer> timer) { timer_ = std::move(timer); }
+  std::shared_ptr<Timer> timer() const { return timer_; }
 
   // context_ related
   template <typename T>
-  void setContext(T *context) {
+  void setContext(T* context) {
     context_ = context;
     // register deleter for a specific type
-    contextDeleter_ = [](void *ptr) { delete static_cast<T *>(ptr); };
+    contextDeleter_ = [](void* ptr) { delete static_cast<T*>(ptr); };
   }
-  void *context() { return context_; }
+  void* context() { return context_; }
 };

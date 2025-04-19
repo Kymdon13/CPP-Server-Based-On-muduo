@@ -25,7 +25,7 @@ void EventLoop::doPendingFunctors() {
     std::unique_lock<std::mutex> lock(pendingFunctorsMutex_);
     tmp_list.swap(pendingFunctors_);
   }
-  for (auto &cb : tmp_list) {
+  for (auto& cb : tmp_list) {
     cb();
   }
 }
@@ -67,16 +67,16 @@ void EventLoop::quit() {
 
 void EventLoop::loop() {
   while (!quit_) {
-    for (Channel *ready_channel : poller_->Poll()) {
+    for (Channel* ready_channel : poller_->Poll()) {
       ready_channel->handleEvent();
     }
     doPendingFunctors();
   }
 }
 
-void EventLoop::updateChannel(Channel *channel) const { poller_->updateChannel(channel); }
+void EventLoop::updateChannel(Channel* channel) const { poller_->updateChannel(channel); }
 
-void EventLoop::deleteChannel(Channel *channel) const { poller_->deleteChannel(channel); }
+void EventLoop::deleteChannel(Channel* channel) const { poller_->deleteChannel(channel); }
 
 bool EventLoop::isLocalThread() { return tid_ == CurrentThread::gettid(); }
 
@@ -106,4 +106,4 @@ std::shared_ptr<Timer> EventLoop::runEvery(double interval, std::function<void()
   return timerQueue_->addTimer(TimeStamp::now() + interval, interval, cb);
 }
 
-void EventLoop::canelTimer(const std::shared_ptr<Timer> &timer) { timerQueue_->cancelTimer(timer); }
+void EventLoop::canelTimer(const std::shared_ptr<Timer>& timer) { timerQueue_->cancelTimer(timer); }

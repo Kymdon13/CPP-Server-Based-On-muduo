@@ -15,9 +15,9 @@ template <size_t SIZE>
 class FixedBuffer {
  private:
   char data_[SIZE];
-  char *cur_ = data_;
+  char* cur_ = data_;
 
-  const char *end() const { return data_ + sizeof(data_); }
+  const char* end() const { return data_ + sizeof(data_); }
 
  public:
   DISABLE_COPYING_AND_MOVING(FixedBuffer);
@@ -25,17 +25,17 @@ class FixedBuffer {
   ~FixedBuffer() {}
 
   // append the BUF of length LEN to the buffer
-  void append(const char * /*restrict*/ buf, size_t len) {
+  void append(const char* /*restrict*/ buf, size_t len) {
     if (static_cast<size_t>(avail()) > len) {
       memcpy(cur_, buf, len);
       cur_ += len;
     }
   }
 
-  const char *data() const { return data_; }
+  const char* data() const { return data_; }
   int length() const { return static_cast<int>(cur_ - data_); }
 
-  char *current() { return cur_; }
+  char* current() { return cur_; }
   int avail() const { return static_cast<int>(end() - cur_); }
   void add(size_t len) { cur_ += len; }
 
@@ -62,26 +62,26 @@ class LogStream {
   ~LogStream() = default;
 
   // implemented in the LogStream.cc
-  self &operator<<(short);
-  self &operator<<(unsigned short);
-  self &operator<<(int);
-  self &operator<<(unsigned int);
-  self &operator<<(long);
-  self &operator<<(unsigned long);
-  self &operator<<(long long);
-  self &operator<<(unsigned long long);
+  self& operator<<(short);
+  self& operator<<(unsigned short);
+  self& operator<<(int);
+  self& operator<<(unsigned int);
+  self& operator<<(long);
+  self& operator<<(unsigned long);
+  self& operator<<(long long);
+  self& operator<<(unsigned long long);
   // floating point types
-  self &operator<<(float);
-  self &operator<<(double);
+  self& operator<<(float);
+  self& operator<<(double);
   // unknown type, convert to hex (0xab)
-  self &operator<<(const void *);
+  self& operator<<(const void*);
 
   // string type
-  self &operator<<(char v) {
+  self& operator<<(char v) {
     buffer_.append(&v, 1);
     return *this;
   }
-  self &operator<<(const char *str) {
+  self& operator<<(const char* str) {
     if (str) {
       buffer_.append(str, strlen(str));
     } else {
@@ -89,19 +89,19 @@ class LogStream {
     }
     return *this;
   }
-  self &operator<<(const unsigned char *str) { return operator<<(reinterpret_cast<const char *>(str)); }
-  self &operator<<(const std::string &str) {
+  self& operator<<(const unsigned char* str) { return operator<<(reinterpret_cast<const char*>(str)); }
+  self& operator<<(const std::string& str) {
     buffer_.append(str.c_str(), str.size());
     return *this;
   }
-  self &operator<<(const FixedBuffer<FIXED_BUFFER_SIZE> &buf) {
+  self& operator<<(const FixedBuffer<FIXED_BUFFER_SIZE>& buf) {
     buffer_.append(buf.data(), buf.length());
     return *this;
   }
 
   // LogStream public interface
-  void append(const char *buf, size_t len) { buffer_.append(buf, len); }
-  const FixedBuffer<FIXED_BUFFER_SIZE> &buffer() const { return buffer_; }
+  void append(const char* buf, size_t len) { buffer_.append(buf, len); }
+  const FixedBuffer<FIXED_BUFFER_SIZE>& buffer() const { return buffer_; }
   void resetBuffer() { buffer_.reset(); }
   void bzeroBuffer() { buffer_.bzero(); }
 };

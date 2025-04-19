@@ -1,15 +1,15 @@
 #include "HTTP-Response.h"
 
+#include <tcp/Buffer.h>
+
 #include <memory>
 #include <string>
 #include <utility>
 
-#include <tcp/Buffer.h>
-
 std::string g_staticPath = "/home/wzy/code/cpp-server/static/";
 
 std::string HTTPResponse::staticPath() { return g_staticPath; }
-void HTTPResponse::setStaticPath(const std::string &path) { g_staticPath = path; }
+void HTTPResponse::setStaticPath(const std::string& path) { g_staticPath = path; }
 
 std::string HTTPResponse::statusToString(Status stat) {
   switch (stat) {
@@ -74,7 +74,7 @@ std::shared_ptr<Buffer> HTTPResponse::getResponse() {
   }
 
   // add other headers
-  for (const auto &header : headers_) {
+  for (const auto& header : headers_) {
     before_body += header.first + ": " + header.second + "\r\n";
   }
 

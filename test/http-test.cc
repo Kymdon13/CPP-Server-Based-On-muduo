@@ -6,8 +6,8 @@
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 
-HTTPResponse::Status parse_http_request(const std::string &http_request) {
-  HTTPContext *context = new HTTPContext();
+HTTPResponse::Status parse_http_request(const std::string& http_request) {
+  HTTPContext* context = new HTTPContext();
 
   HTTPContext::ParseState state = context->parseRequest(http_request.c_str(), http_request.size());
 
@@ -19,7 +19,7 @@ HTTPResponse::Status parse_http_request(const std::string &http_request) {
 
   std::cout << "...................." << std::endl;
 
-  HTTPRequest *request = context->getRequest();
+  HTTPRequest* request = context->getRequest();
 
   std::cout << "method: " << request->methodAsString() << std::endl << std::endl;
   std::cout << "url: " << request->url() << std::endl;

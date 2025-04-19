@@ -1,16 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 set(BUILD_SHARED_LIBS ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "CXX standard is ${CMAKE_CXX_STANDARD}")
-
-####################
-# set clang compiler
-####################
-set(CMAKE_C_COMPILER /usr/bin/clang)
-set(CMAKE_CXX_COMPILER /usr/bin/clang++)
 
 message(STATUS "C/CXX compiler are ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}")
 
@@ -95,16 +89,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -std=c++17 -pthread"
 # -ggdb: generate debugging info for the GDB debugger
 # -fsanitize=address: enable AddressSanitizer, a tool for detecting memory errors
 # -fno-optimize-sibling-calls: disables sibling call optimization, also helpfull for debugging
-
-# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-# FIXME(wzy) disable the AddressSanitizer temporarily
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+# XXX(wzy) disable the AddressSanitizer temporarily
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 
 # generate Position Independent Code is essential for shared libs
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fPIC")
 
-### print compiler flags
+### compiler flags
 set(GCC_COVERAGE_LINK_FLAGS "-fPIC") # for the collection of coverage info
+# set compile options
+add_compile_options(-stdlib=libc++)
+# set link options
+add_link_options(-stdlib=libc++ -lc++ -lc++abi)
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
@@ -117,12 +114,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # set include dirs
 include_directories(${PROJECT_SOURCE_DIR}/src)
-# file(GLOB SUB_DIRS "${PROJECT_SOURCE_DIR}/src/*")
-# foreach(DIR ${SUB_DIRS})
-#     if(IS_DIRECTORY ${DIR})
-#         include_directories(${DIR})
-#     endif()
-# endforeach()
 
 # sub CMakeLists.txt
 add_subdirectory(src)

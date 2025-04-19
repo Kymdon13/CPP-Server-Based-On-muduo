@@ -1,6 +1,6 @@
 #include "Timer.h"
 
-Timer::Timer(TimeStamp timestamp, double interval, const std::function<void()> &cb)
+Timer::Timer(TimeStamp timestamp, double interval, const std::function<void()>& cb)
     : expiration_(timestamp),
       cb_(cb),
       isInterval_(interval > 0.),

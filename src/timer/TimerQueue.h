@@ -19,15 +19,11 @@ class TimerQueue {
   using Entry = std::pair<TimeStamp, std::shared_ptr<Timer>>;
   // make sure the nullptr is the biggest
   struct Compare {
-    bool operator()(const Entry &lhs, const Entry &rhs) const {
+    bool operator()(const Entry& lhs, const Entry& rhs) const {
       if (lhs.first == rhs.first) {
         // make sure that nullptr is the biggest
-        if (lhs.second == nullptr) {
-          return false;
-        }
-        if (rhs.second == nullptr) {
-          return true;
-        }
+        if (lhs.second == nullptr) return false;
+        if (rhs.second == nullptr) return true;
         return lhs.second.get() < rhs.second.get();
       }
       return lhs.first < rhs.first;
@@ -35,7 +31,7 @@ class TimerQueue {
   };
   using ActiveEntry = std::shared_ptr<Timer>;
 
-  EventLoop *loop_;
+  EventLoop* loop_;
   const int timerfd_;
   Channel channel_;
   // Timer set sorted by 1.TimeStamp 2.Timer shared_ptr
@@ -47,15 +43,15 @@ class TimerQueue {
   std::set<ActiveEntry> cancelingTimers_;
 
   std::vector<Entry> getExpired(TimeStamp now);
-  void reset(const std::vector<Entry> &expired, TimeStamp now);
+  void reset(const std::vector<Entry>& expired, TimeStamp now);
   void resetTimerfd(TimeStamp nextExpiration);
-  bool insert(const std::shared_ptr<Timer> &timer);
+  bool insert(const std::shared_ptr<Timer>& timer);
 
  public:
   DISABLE_COPYING_AND_MOVING(TimerQueue);
-  explicit TimerQueue(EventLoop *loop);
+  explicit TimerQueue(EventLoop* loop);
   ~TimerQueue();
 
   std::shared_ptr<Timer> addTimer(TimeStamp when, double interval, std::function<void()> cb);
-  void cancelTimer(const std::shared_ptr<Timer> &timer);
+  void cancelTimer(const std::shared_ptr<Timer>& timer);
 };

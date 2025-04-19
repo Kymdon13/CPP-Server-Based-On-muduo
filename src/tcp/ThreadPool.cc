@@ -1,7 +1,8 @@
 #include "ThreadPool.h"
+
 #include "Thread.h"
 
-ThreadPool::ThreadPool(EventLoop *loop, int n_threads) : mainReactor_(loop), n_threads_(n_threads) {}
+ThreadPool::ThreadPool(EventLoop* loop, int n_threads) : mainReactor_(loop), n_threads_(n_threads) {}
 
 ThreadPool::~ThreadPool() {}
 
@@ -12,7 +13,7 @@ void ThreadPool::init() {
   }
 }
 
-EventLoop *ThreadPool::getSubReactor() {
+EventLoop* ThreadPool::getSubReactor() {
   if (!loops_.empty()) {
     ++whichSubReactor_;
     whichSubReactor_ %= loops_.size();

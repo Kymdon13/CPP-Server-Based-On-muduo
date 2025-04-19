@@ -13,18 +13,19 @@
 #include "base/Exception.h"
 #include "base/util.h"
 #include "log/Logger.h"
+#include "tcp/Buffer.h"
 #include "tcp/TCP-Connection.h"
 #include "tcp/TCP-Server.h"
 
 #define CONNECTION_TIMEOUT_SECOND 900.
 
-HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(loop) {
+HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port) : loop_(loop) {
   tcpServer_ = std::make_unique<TCPServer>(loop, ip, port);
 
   /**
    * set TCPServer::on_connection_callback_
    */
-  tcpServer_->onConnection([this](const std::shared_ptr<TCPConnection> &conn) {
+  tcpServer_->onConnection([this](const std::shared_ptr<TCPConnection>& conn) {
     int fd_clnt = conn->fd();
 
     // init the HTTPContext
@@ -49,32 +50,27 @@ HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(
     // print out peer's info
     struct sockaddr_in addr_peer;
     socklen_t addrlength_peer = sizeof(addr_peer);
-    getpeername(fd_clnt, (struct sockaddr *)&addr_peer, &addrlength_peer);
-    struct sockaddr_in addr_local;
-    socklen_t addrlength_local = sizeof(addr_local);
-    getsockname(fd_clnt, (struct sockaddr *)&addr_local, &addrlength_local);
+    getpeername(fd_clnt, (struct sockaddr*)&addr_peer, &addrlength_peer);
     std::cout << "tid-" << CurrentThread::gettid() << " Connection"
-              << "[fd#" << fd_clnt << "]"
-              << " from " << inet_ntoa(addr_peer.sin_addr) << ":" << ntohs(addr_peer.sin_port) << " to "
-              << inet_ntoa(addr_local.sin_addr) << ":" << ntohs(addr_local.sin_port) << std::endl;
+              << "[fd#" << fd_clnt << ']' << " from " << inet_ntoa(addr_peer.sin_addr) << ':'
+              << ntohs(addr_peer.sin_port) << std::endl;
   });
 
   /**
    * set TCPConnection::on_message_callback_
    */
-  tcpServer_->onMessage([this](const std::shared_ptr<TCPConnection> &conn) {
+  tcpServer_->onMessage([this](const std::shared_ptr<TCPConnection>& conn) {
     if (TCPState::Connected != conn->connectionState()) {
       LOG_WARN << "HTTPConnection::EnableHTTPConnection, on_message_callback_ called while disconnected";
       return;
     }
     using ParseState = HTTPContext::ParseState;
-    ParseState return_state;
-    HTTPContext *http_context_ = static_cast<HTTPContext *>(conn->context());
-    return_state = http_context_->parseRequest(conn->inBuffer()->peek(), conn->inBuffer()->readableBytes());
-    conn->inBuffer()->retrieveAll();
+    ParseState return_state;  // FIXME
+    HTTPContext* http_context_ = static_cast<HTTPContext*>(conn->context());
+    return_state = http_context_->parseRequest(conn->inBuffer());
     switch (return_state) {
       case ParseState::COMPLETE: {
-        HTTPRequest *req = http_context_->getRequest();
+        HTTPRequest* req = http_context_->getRequest();
         // check if client wish to keep the connection
         std::string conn_state = req->getHeaderByKey("Connection");
         bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
@@ -85,7 +81,7 @@ HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(
         // send message
         conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
         // reset the state of the parser and the snapshot_
-        http_context_->resetState();
+        http_context_->reset();
         // if the client wish to close connection
         if (res.isClose()) {
           if (conn->connectionState() == TCPState::Disconnected) {
@@ -144,11 +140,3 @@ HTTPServer::HTTPServer(EventLoop *loop, const char *ip, const int port) : loop_(
     }
   });
 }
-
-HTTPServer::~HTTPServer() {}
-
-void HTTPServer::onResponse(std::function<void(const HTTPRequest *, HTTPResponse *)> cb) {
-  on_response_callback_ = std::move(cb);
-}
-
-void HTTPServer::start() { tcpServer_->start(); }

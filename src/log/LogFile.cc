@@ -5,7 +5,7 @@
 #include "base/ProcInfo.h"
 #include "timer/TimeStamp.h"
 
-std::string LogFile::getLogFileName(TimeStamp &now) {
+std::string LogFile::getLogFileName(TimeStamp& now) {
   std::string filename;
   filename.reserve(307);  // 15 + 1 + 255 + 32 + 4
 
@@ -24,7 +24,7 @@ std::string LogFile::getLogFileName(TimeStamp &now) {
   return filename;
 }
 
-LogFile::LogFile(const std::string &dir, size_t rollSize, int checkEveryN, time_t period)
+LogFile::LogFile(const std::string& dir, size_t rollSize, int checkEveryN, time_t period)
     : dir_(dir),
       rollSize_(rollSize),
       checkEveryN_(checkEveryN),
@@ -69,7 +69,7 @@ LogFile::LogFile(const std::string &dir, size_t rollSize, int checkEveryN, time_
 // }
 
 // new append, remove lastFlush_
-void LogFile::append(const char *logline, int len) {
+void LogFile::append(const char* logline, int len) {
   // write to the buffer
   file_->append(logline, len);
 
@@ -111,7 +111,7 @@ void LogFile::append(const char *logline, int len) {
 // }
 
 // // remove lastFlush_
-void LogFile::rollFile(TimeStamp &now) {
+void LogFile::rollFile(TimeStamp& now) {
   time_t nowInSecond = now.getSecond();
   // if the current timestamp is greater than lastRoll_
   if (nowInSecond > lastRoll_) {
