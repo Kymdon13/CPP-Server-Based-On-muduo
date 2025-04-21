@@ -6,11 +6,6 @@
 #include <string>
 #include <utility>
 
-std::string g_staticPath = "/home/wzy/code/cpp-server/static/";
-
-std::string HTTPResponse::staticPath() { return g_staticPath; }
-void HTTPResponse::setStaticPath(const std::string& path) { g_staticPath = path; }
-
 std::string HTTPResponse::statusToString(Status stat) {
   switch (stat) {
     case Status::Continue:
@@ -42,15 +37,24 @@ std::string HTTPResponse::contentTypeToString(ContentType type) {
       return "text/html; charset=utf-8";
     case ContentType::text_css:
       return "text/css; charset=utf-8";
-    case ContentType::text_javascript:
+    case ContentType::text_js:
       return "text/javascript; charset=utf-8";
-    case ContentType::image_jpeg:
+    case ContentType::text_md:
+      return "text/markdown; charset=utf-8";
+    case ContentType::image_jpg:
       return "image/jpeg";
+    case ContentType::image_png:
+      return "image/png";
+    case ContentType::image_gif:
+      return "image/gif";
+    case ContentType::image_ico:
+      return "image/x-icon";
     default:
       return "text/plain; charset=utf-8";
   }
 }
 
+// some examples of HTTP response:
 // HTTP/1.1 204 No Content
 // Server: nginx
 // Date: Tue, 15 Apr 2025 12:45:39 GMT

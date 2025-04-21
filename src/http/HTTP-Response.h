@@ -21,7 +21,17 @@ class HTTPResponse {
     HTTPVersionNotSupported = 505
   };
 
-  enum class ContentType : uint8_t { text_plain, text_html, text_css, text_javascript, image_jpeg };
+  enum class ContentType : uint8_t {
+    text_plain,
+    text_html,
+    text_css,
+    text_js,
+    text_md,
+    image_jpg,
+    image_png,
+    image_gif,
+    image_ico
+  };
 
  private:
   bool close_;
@@ -45,10 +55,6 @@ class HTTPResponse {
   void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
   bool isClose() { return close_; }
   void setClose(bool close) { close_ = close; }
-
-  // path to store static files, must be absolute path
-  static std::string staticPath();
-  static void setStaticPath(const std::string& path);
 
   static std::string statusToString(Status stat);
   static std::string contentTypeToString(ContentType type);

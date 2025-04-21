@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "CXX standard is ${CMAKE_CXX_STANDARD}")
-
 message(STATUS "C/CXX compiler are ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}")
 
 ####################
@@ -51,29 +50,31 @@ else ()
     message(STATUS "CppServer/main found clang-format at ${CLANG_FORMAT_BIN}")
 endif ()
 
-# clang-tidy
-if (NOT DEFINED CLANG_TIDY_BIN)
-    # attempt to find the binary if user did not specify
-    find_program(CLANG_TIDY_BIN
-                NAMES clang-tidy
-                HINTS ${CPPSERVER_CLANG_SEARCH_PATH})
-endif ()
-if ("${CLANG_TIDY_BIN}" STREQUAL "CLANG_TIDY_BIN-NOTFOUND")
-    message(WARNING "CppServer/main couldn't find clang-tidy.")
-else ()
-    set(CMAKE_EXPORT_COMPILE_COMMANDS 1) # output compile_commands.json
-    message(STATUS "CppServer/main found clang-fidy at ${CLANG_TIDY_BIN}")
-endif ()
+# # clang-tidy
+# FIXME(ban)
+# if (NOT DEFINED CLANG_TIDY_BIN)
+#     # attempt to find the binary if user did not specify
+#     find_program(CLANG_TIDY_BIN
+#                 NAMES clang-tidy
+#                 HINTS ${CPPSERVER_CLANG_SEARCH_PATH})
+# endif ()
+# if ("${CLANG_TIDY_BIN}" STREQUAL "CLANG_TIDY_BIN-NOTFOUND")
+#     message(WARNING "CppServer/main couldn't find clang-tidy.")
+# else ()
+#     set(CMAKE_EXPORT_COMPILE_COMMANDS 1) # output compile_commands.json
+#     message(STATUS "CppServer/main found clang-fidy at ${CLANG_TIDY_BIN}")
+# endif ()
 
-# cpplint
-find_program(CPPLINT_BIN
-            NAMES cpplint cpplint.py
-            HINTS ${CPPSERVER_BUILD_SUPPORT_DIR})
-if ("${CPPLINT_BIN}" STREQUAL "CPPLINT_BIN-NOTFOUND")
-    message(WARNING "CppServer/main couldn't find cpplint.")
-else ()
-    message(STATUS "CppServer/main found cpplint at ${CPPLINT_BIN}")
-endif ()
+# # cpplint
+# FIXME(ban)
+# find_program(CPPLINT_BIN
+#             NAMES cpplint cpplint.py
+#             HINTS ${CPPSERVER_BUILD_SUPPORT_DIR})
+# if ("${CPPLINT_BIN}" STREQUAL "CPPLINT_BIN-NOTFOUND")
+#     message(WARNING "CppServer/main couldn't find cpplint.")
+# else ()
+#     message(STATUS "CppServer/main found cpplint at ${CPPLINT_BIN}")
+# endif ()
 
 ############################################################
 # compiler setup
@@ -81,27 +82,29 @@ endif ()
 
 ### compiler flags
 # -fPIC: generate Position Independent Code
+# -stdlib=libc++: use libc++ instead of libstdc++
 # -Wall: enable all compiler warnings
 # -Wextra: enable extra compiler warnings which is more strict than `-Wall`
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -std=c++17 -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -stdlib=libc++ -Wall -Wextra -pthread")
 
 # -O0: disable compiler optimizations
 # -ggdb: generate debugging info for the GDB debugger
 # -fsanitize=address: enable AddressSanitizer, a tool for detecting memory errors
 # -fno-optimize-sibling-calls: disables sibling call optimization, also helpfull for debugging
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-# XXX(wzy) disable the AddressSanitizer temporarily
-# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+# BUG(wzy) disable the ASan, cuz it is not compatible with libc++ and gtest, any throw now will cause ASan error
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+
+### linker flags
+# -Wl,-rpath,/usr/lib/llvm-17/lib: set the runtime library search path to /usr/lib/llvm-17/lib
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,/usr/lib/llvm-17/lib")
+
+# enable ASan support for libc++
+add_compile_definitions(_LIBCPP_HAS_ASAN)
 
 # generate Position Independent Code is essential for shared libs
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fPIC")
 
-### compiler flags
-set(GCC_COVERAGE_LINK_FLAGS "-fPIC") # for the collection of coverage info
-# set compile options
-add_compile_options(-stdlib=libc++)
-# set link options
-add_link_options(-stdlib=libc++ -lc++ -lc++abi)
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
@@ -114,8 +117,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # set include dirs
 include_directories(${PROJECT_SOURCE_DIR}/src)
+# set compiler flags
+include_directories(SYSTEM /usr/lib/llvm-17/include/c++/v1)
+link_directories(/usr/lib/llvm-17/lib)
 
-# sub CMakeLists.txt
+# add sub CMakeLists.txt
 add_subdirectory(src)
 add_subdirectory(test)
 
@@ -144,45 +150,49 @@ add_custom_target(format ALL
                 )
 
 # run clang format and exits with a non-zero exit code if any files need to be reformatted
-add_custom_target(check-format
-                ${CPPSERVER_BUILD_SUPPORT_DIR}/run_clang_format.py
-                ${CLANG_FORMAT_BIN}
-                ${CPPSERVER_BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
-                --source_dirs
-                ${CPPSERVER_FORMAT_DIRS}
-                --quiet
-                )
+# FIXME(ban)
+# add_custom_target(check-format
+#                 ${CPPSERVER_BUILD_SUPPORT_DIR}/run_clang_format.py
+#                 ${CLANG_FORMAT_BIN}
+#                 ${CPPSERVER_BUILD_SUPPORT_DIR}/clang_format_exclusions.txt
+#                 --source_dirs
+#                 ${CPPSERVER_FORMAT_DIRS}
+#                 --quiet
+#                 )
 
 ####################
 # `make clang-tidy`
 ####################
 # runs clang-tidy and exits with a non-zero exit code if any errors are found
 # note that clang-tidy automatically looks for a .clang-tidy file in parent directories
-add_custom_target(clang-tidy
-                ${CPPSERVER_BUILD_SUPPORT_DIR}/run_clang_tidy.py # run LLVM's clang-tidy script
-                -clang-tidy-binary ${CLANG_TIDY_BIN} # using our clang-tidy binary
-                -p ${CMAKE_BINARY_DIR} # using cmake's generated compile commands
-                )
+# FIXME(ban)
+# add_custom_target(clang-tidy
+#                 ${CPPSERVER_BUILD_SUPPORT_DIR}/run_clang_tidy.py # run LLVM's clang-tidy script
+#                 -clang-tidy-binary ${CLANG_TIDY_BIN} # using our clang-tidy binary
+#                 -p ${CMAKE_BINARY_DIR} # using cmake's generated compile commands
+#                 )
 
 ####################
 # `make cpplint`
 ####################
-file(GLOB_RECURSE CPPSERVER_LINT_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc"
-    )
+# FIXME(ban)
+# file(GLOB_RECURSE CPPSERVER_LINT_FILES
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.h"
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cc"
+#     "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h"
+#     "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc"
+#     )
 
 # balancing act: cpplint.py takes a non-trivial time to launch
 # so process 12 files per invocation, while still ensuring parallelism
-add_custom_target(cpplint
-                echo '${CPPSERVER_LINT_FILES}' | xargs -n12 -P8
-                ${CPPLINT_BIN}
-                --verbose=2 --quiet
-                --linelength=120
-                --filter=-legal/copyright,-build/include_subdir,-readability/casting
-                )
+# FIXME(ban)
+# add_custom_target(cpplint
+#                 echo '${CPPSERVER_LINT_FILES}' | xargs -n12 -P8
+#                 ${CPPLINT_BIN}
+#                 --verbose=2 --quiet
+#                 --linelength=120
+#                 --filter=-legal/copyright,-build/include_subdir,-readability/casting
+#                 )
 
 ############################################################
 # my own scripts

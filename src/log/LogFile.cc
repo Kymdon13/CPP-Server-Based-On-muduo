@@ -117,6 +117,6 @@ void LogFile::rollFile(TimeStamp& now) {
   if (nowInSecond > lastRoll_) {
     lastRoll_ = nowInSecond;
     std::string logFileName = getLogFileName(now);
-    file_.reset(new FileUtil::AppendFile(dir_ + '/' + logFileName));
+    file_.reset(new AppendFile(dir_ + '/' + logFileName));
   }
 }

@@ -5,14 +5,17 @@
 #include <vector>
 
 class Buffer {
- public:
-  static const size_t CheapPrepend = 8;
+ private:
+  size_t CheapPrepend;
   static const size_t InitSize = 1024;
 
-  explicit Buffer(size_t initSize = InitSize)
-      : buffer_(initSize + CheapPrepend), readerIndex_(CheapPrepend), writerIndex_(CheapPrepend) {}
-
  public:
+  explicit Buffer(size_t initSize = InitSize, size_t cheapPrepend = 8)
+      : CheapPrepend(cheapPrepend),
+        buffer_(initSize + CheapPrepend),
+        readerIndex_(CheapPrepend),
+        writerIndex_(CheapPrepend) {}
+
   void swap(Buffer& rhs) {
     buffer_.swap(rhs.buffer_);
     std::swap(readerIndex_, rhs.readerIndex_);

@@ -19,8 +19,17 @@
 
 #define CONNECTION_TIMEOUT_SECOND 900.
 
-HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port) : loop_(loop) {
-  tcpServer_ = std::make_unique<TCPServer>(loop, ip, port);
+HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const std::filesystem::path& staticPath)
+    : loop_(loop),
+      tcpServer_(std::make_unique<TCPServer>(loop, ip, port)),
+      fileCache_(std::make_unique<FileLRU>(staticPath)) {
+  // add all files in the static dir into staticFiles_
+  namespace fs = std::filesystem;
+  for (const auto& entry : fs::recursive_directory_iterator(staticPath)) {
+    if (fs::is_regular_file(entry.status())) {
+      staticFiles_.insert('/' + fs::relative(entry.path(), staticPath).string());
+    }
+  }
 
   /**
    * set TCPServer::on_connection_callback_

@@ -33,7 +33,7 @@ void http_client_body() {
 
   std::string http_request =
       "GET /cat.jpg HTTP/1.1\r\n"
-      "Content-Length: 10\r\n"
+      "Content-Length: 100010\r\n"
       "\r\n"
       "helloworld";
 

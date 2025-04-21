@@ -19,7 +19,7 @@ class LogFile {
   time_t periodStartingPoint_;
   const time_t period_;
 
-  std::unique_ptr<FileUtil::AppendFile> file_;
+  std::unique_ptr<AppendFile> file_;
   static std::string getLogFileName(TimeStamp& now);
 
  public:

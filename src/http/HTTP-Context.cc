@@ -45,7 +45,7 @@ bool isInvalidURLChar(const char& c) {
     case '*':
     case '+':
     case ',':
-    case '/':
+    // case '/':
     case ':':
     case ';':
     case '<':
@@ -102,8 +102,8 @@ HTTPContext::ParseState HTTPContext::parseRequest(Buffer* buffer) {
   if (snapshot_->parseState__ > ParseState::START) {  // means not completed
     combined_request =
         snapshot_->lastRequest__ + std::string(begin, size);  // join the last request and current request
-    begin = combined_request.c_str();  // point to the left border
-    start = begin;                         // point to left border
+    begin = combined_request.c_str();                         // point to the left border
+    start = begin;                                            // point to left border
     cur = start + snapshot_->lastRequest__.size();            // point to beginning of the next request
     end = start + combined_request.size();
     colon = start + snapshot_->colon__;  // restore the position of colon

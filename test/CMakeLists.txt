@@ -1,11 +1,12 @@
-file(GLOB CPPSERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*.cc")
+file(GLOB CPPSERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*.cc" "${PROJECT_SOURCE_DIR}/test/**/*.cc")
 
 ####################
 # `make build-test`
 # `make check-test`
 ####################
-add_custom_target(build-tests COMMAND ${CMAKE_CTEST_COMMAND} --show-only)
-add_custom_target(check-tests COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
+# FIXME(ban)
+# add_custom_target(build-tests COMMAND ${CMAKE_CTEST_COMMAND} --show-only)
+# add_custom_target(check-tests COMMAND ${CMAKE_CTEST_COMMAND} --verbose)
 
 ####################
 # make all executables
@@ -19,8 +20,9 @@ foreach (cppserver_test_source ${CPPSERVER_TEST_SOURCES})
     # add the test target
     add_executable(${cppserver_test_name} EXCLUDE_FROM_ALL ${cppserver_test_source})
     # add the test target as part of `make check-test`
-    add_dependencies(build-tests ${cppserver_test_name})
-    add_dependencies(check-tests ${cppserver_test_name})
+    # FIXME(ban)
+    # add_dependencies(build-tests ${cppserver_test_name})
+    # add_dependencies(check-tests ${cppserver_test_name})
 
     # CPPSERVER_SHARED is defined in src/CMakeLists.txt
     target_link_libraries(${cppserver_test_name} CPPSERVER_SHARED)

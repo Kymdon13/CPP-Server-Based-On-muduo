@@ -1,0 +1,59 @@
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.tip {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.search {
+    width: 650px;
+}
+
+.search-list li {
+    text-align: left;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.query {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+}
+
+.search-list li:hover {
+    transform: scale(1.1); /* 放大 10% */
+    background-color: #dbdbdb;
+    cursor: pointer;
+}
+
+.search-list li.selected {
+    transform: scale(1.1); /* 放大 10% */
+    background-color: #dbdbdb;
+    cursor: pointer;
+}
+
+input[type="text"] {
+    width: 600px;
+    height: 50px;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+#markdown-content {
+    width: 800px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #ffffff;
+}
+
+#cur_cmd {
+    display: none;
+}
