@@ -19,7 +19,8 @@ int Socket(int port) {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) return sockfd;
 
-  struct sockaddr_in serv_addr; bzero(&serv_addr, sizeof(serv_addr));
+  struct sockaddr_in serv_addr;
+  bzero(&serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
   serv_addr.sin_port = htons(port);
@@ -29,8 +30,8 @@ int Socket(int port) {
 }
 
 int g_Port = 5000;
-size_t g_Clients = 10000;
-int g_Benchtime = 10;
+size_t g_Clients = 100;
+int g_Benchtime = 1;
 std::atomic<size_t> g_Success(0);
 std::atomic<size_t> g_Fail(0);
 std::atomic<size_t> g_Bytes(0);
@@ -52,6 +53,8 @@ void worker(std::string path) {
     close(sockfd);
     return;
   }
+
+  /* set the timer through SO_RCVTIMEO (without receiving msg, the socket will close automatically) */
   struct timeval tv;
   tv.tv_sec = g_Benchtime;
   tv.tv_usec = 0;
@@ -102,18 +105,18 @@ int main(int argc, char* argv[]) {
   usage += argv[0];
   usage += " -p port -c clients -t time\n";
   int parseNTimes = 0;
-  while ((opt = getopt(argc, argv, "p:c:t")) != -1) {
+  while ((opt = getopt(argc, argv, "p:c:t:")) != -1) {
     switch (opt) {
       case 'p':
-        std::cout << "Port: " << optarg << "\n";
+        std::cout << "Port: " << optarg << std::endl;
         g_Port = atoi(optarg);
         break;
       case 'c':
-        std::cout << "Clients: " << optarg << "\n";
+        std::cout << "Clients: " << optarg << std::endl;
         g_Clients = atoi(optarg);
         break;
       case 't':
-        std::cout << "Time: " << optarg << "\n";
+        std::cout << "Time: " << optarg << std::endl;
         g_Benchtime = atoi(optarg);
         break;
       default:
@@ -122,19 +125,40 @@ int main(int argc, char* argv[]) {
     }
     ++parseNTimes;
   }
-  // if (parseNTimes < 3) {
-  //   std::cerr << usage;
-  //   return 1;
-  // }
+  if (parseNTimes < 3) {
+    std::cerr << usage;
+    return 1;
+  }
+
+  /* opt checking */
+  if (g_Port < 1 || g_Port > 65535) {
+    std::cerr << "Port must be between 1 and 65535\n";
+    return 1;
+  }
+  if (g_Clients <= 0) {
+    std::cerr << "Clients must be greater than 0\n";
+    return 1;
+  }
+  if (g_Benchtime <= 0) {
+    std::cerr << "Time must be greater than 0\n";
+    return 1;
+  }
 
   /* static file paths */
   std::vector<std::string> staticFiles;
-  std::filesystem::path staticPath = "/home/wzy/code/cpp-server/static/";
+  std::filesystem::path staticPath = "/home/wzy/code/cpp-server/static";
   namespace fs = std::filesystem;
   for (const auto& entry : fs::recursive_directory_iterator(staticPath)) {
     if (fs::is_regular_file(entry.status())) {
       staticFiles.emplace_back('/' + fs::relative(entry.path(), staticPath).string());
     }
+  }
+
+  /* test connection */
+  int sockfd = Socket(g_Port);
+  if (sockfd < 0) {
+    std::cerr << "Socket connect error\n";
+    return 1;
   }
 
   /* start timer */
@@ -156,6 +180,7 @@ int main(int argc, char* argv[]) {
 
   /* print out final info */
   std::cout << "\n====================\n";
-  std::cout << "speed=" << (g_Success + g_Fail) / (duration) << "\nRequest: "
-            << "success=" << g_Success << ", fail=" << g_Fail << ", byte rate=" << (g_Bytes / duration) << "\n";
+  std::cout << "processing speed=" << (g_Success + g_Fail) / (duration) << "req/s"
+            << "\nRequest: "
+            << "success=" << g_Success << ", fail=" << g_Fail << ", byte rate=" << (g_Bytes / duration) << " bytes/s\n";
 }

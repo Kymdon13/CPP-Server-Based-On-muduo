@@ -45,7 +45,6 @@ void ReadFile::read() {
     throw std::filesystem::filesystem_error("FileUtil::ReadFile::read(), failed to open file: " + path_.string(),
                                             std::make_error_code(std::errc::no_such_file_or_directory));
   }
-
   // get file size
   size_t fileSize = std::filesystem::file_size(path_);
   // preallocate string to hold the file content

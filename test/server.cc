@@ -44,6 +44,7 @@ int main() {
       if (url == "/") {
         res->setStatus(Status::OK);
         res->setContentType(ContentType::text_html);
+        // FIXME(wzy) getFile can not input rel path directly
         res->setBody(server->getFile(g_staticPath.string() + "linux_cmd.html"));
       } else if (server->findStaticFile(url)) {
         res->setStatus(Status::OK);
