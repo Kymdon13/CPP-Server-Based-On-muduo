@@ -55,6 +55,7 @@ void worker(std::string path) {
   }
 
   /* set the timer through SO_RCVTIMEO (without receiving msg, the socket will close automatically) */
+  // HACK(wzy) we set the socket to quit after g_Benchtime seconds, but this is not the right logic
   struct timeval tv;
   tv.tv_sec = g_Benchtime;
   tv.tv_usec = 0;

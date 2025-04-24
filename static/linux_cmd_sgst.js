@@ -1,7 +1,7 @@
 const sortArray = function (a, b) {
     return a.nIdx - b.nIdx
 };
-const markdownit = window.markdownit;
+const mdit = window.markdownit();
 sg = new class suggest {
     query = "";
     query_size = 10;
@@ -141,7 +141,7 @@ sg = new class suggest {
                             return response.text();
                         })
                         .then((text) => {
-                            this.md.innerHTML = markdownit.render(text);
+                            this.md.innerHTML = mdit.render(text);
                             this.cur_cmd.className = cmd;
                         })
                 }

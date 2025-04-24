@@ -23,14 +23,6 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
     : loop_(loop),
       tcpServer_(std::make_unique<TCPServer>(loop, ip, port)),
       fileCache_(std::make_unique<FileLRU>(staticPath)) {
-  // add all files in the static dir into staticFiles_
-  namespace fs = std::filesystem;
-  for (const auto& entry : fs::recursive_directory_iterator(staticPath)) {
-    if (fs::is_regular_file(entry.status())) {
-      staticFiles_.insert('/' + fs::relative(entry.path(), staticPath).string());
-    }
-  }
-
   /**
    * set TCPServer::on_connection_callback_
    */
@@ -40,7 +32,7 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
     // init the HTTPContext
     conn->setContext(new HTTPContext());
 
-    // set timer for timeout close
+    // set timer for timeout closing
     conn->setTimer(loop_->runEvery(CONNECTION_TIMEOUT_SECOND, [this, conn]() {
       if (conn->connectionState() == TCPState::Connected) {
         if (conn->lastActive() + CONNECTION_TIMEOUT_SECOND < TimeStamp::now()) {

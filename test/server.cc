@@ -44,9 +44,15 @@ int main() {
       if (url == "/") {
         res->setStatus(Status::OK);
         res->setContentType(ContentType::text_html);
-        // FIXME(wzy) getFile can not input rel path directly
-        res->setBody(server->getFile(g_staticPath.string() + "linux_cmd.html"));
-      } else if (server->findStaticFile(url)) {
+        res->setBody(server->getFile("/linux_cmd.html"));
+      } else {
+        std::shared_ptr<Buffer> buf = server->getFile(url);
+        if (buf == nullptr) {
+          res->setStatus(Status::NotFound);
+          res->setClose(true);
+          return;
+        }
+        res->setBody(buf);
         res->setStatus(Status::OK);
         if (fs::path(url).extension().string() == ".css") {
           res->setContentType(ContentType::text_css);
@@ -65,17 +71,6 @@ int main() {
         } else {
           res->setContentType(ContentType::text_plain);
         }
-
-        std::shared_ptr<Buffer> buf = server->getFile(g_staticPath.string() + url);
-        if (buf == nullptr) {
-          res->setStatus(Status::NotFound);
-          res->setClose(true);
-          return;
-        }
-        res->setBody(buf);
-      } else {
-        res->setStatus(Status::NotFound);
-        res->setClose(true);
       }
     } else {
       res->setStatus(Status::NotImplemented);

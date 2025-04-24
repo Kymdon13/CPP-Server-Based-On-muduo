@@ -59,47 +59,38 @@ void ReadFile::read() {
   bytesRead += ifs.gcount();  // read the remaining bytes
   data_->hasWritten(static_cast<size_t>(bytesRead));
 }
-struct stat ReadFile::stat() {
-  if (stat_.st_ino != 0) {
-    return stat_;
-  }
-  struct stat st;
-  if (::stat(path_.c_str(), &st) != -1) {
-    stat_ = st;
-  } else {
-    int err = errno;
-    if (err == ENOENT) {
-      throw std::system_error(std::make_error_code(std::errc::no_such_file_or_directory),
-                              "ReadFile::stat(), " + path_.string());
-    } else if (err == EACCES) {
-      throw std::system_error(std::make_error_code(std::errc::permission_denied),
-                              "ReadFile::stat(), " + path_.string());
-    } else {
-      throw std::system_error(std::make_error_code(std::errc::io_error), "ReadFile::stat(), " + path_.string());
-    }
-  }
-  return st;
-}
 
-FileLRU::BufferPtr FileLRU::getFile(const std::filesystem::path& rel_or_abs_path) {
+// XXX(wzy) ::stat() is slow, do not use it
+// struct stat ReadFile::stat() {
+//   if (stat_.st_ino != 0) {
+//     return stat_;
+//   }
+//   struct stat st;
+//   if (::stat(path_.c_str(), &st) != -1) {
+//     stat_ = st;
+//   } else {
+//     int err = errno;
+//     if (err == ENOENT) {
+//       throw std::system_error(std::make_error_code(std::errc::no_such_file_or_directory),
+//                               "ReadFile::stat(), " + path_.string());
+//     } else if (err == EACCES) {
+//       throw std::system_error(std::make_error_code(std::errc::permission_denied),
+//                               "ReadFile::stat(), " + path_.string());
+//     } else {
+//       throw std::system_error(std::make_error_code(std::errc::io_error), "ReadFile::stat(), " + path_.string());
+//     }
+//   }
+//   return st;
+// }
+
+FileLRU::BufferPtr FileLRU::getFile(std::filesystem::path request_path) {
   std::unique_lock<std::mutex> lock(mtx_);
   try {
-    ReadFile file(path_ / rel_or_abs_path);  // if rel_or_abs_path is abs path, operator / will return the abs path
-    ino_t key = file.stat().st_ino;
-    time_t mtime = 0;
-
-    BufferPtr value = get(key, &mtime);
+    BufferPtr value = get(request_path.string());
     if (value) {
-      // if modified time is greater than the file's mtime, update the file
-      // caution: you must return file.data() after put(file), cuz value will be out-of-date after put(file)
-      if (mtime > file.stat().st_mtim.tv_sec) {
-        put(file);
-        return file.data();
-      }
       return value;
     } else {
-      put(file);
-      return file.data();
+      return put(request_path.string());
     }
   } catch (const std::filesystem::filesystem_error& e) {
     LOG_ERROR << e.what();
@@ -111,11 +102,8 @@ FileLRU::BufferPtr FileLRU::getFile(const std::filesystem::path& rel_or_abs_path
   return nullptr;
 }
 
-FileLRU::BufferPtr FileLRU::get(ino_t key, time_t* mtime) {
+FileLRU::BufferPtr FileLRU::get(const std::string& key) {
   if (map_.count(key)) {
-    if (mtime) {
-      *mtime = map_[key]->mtime__;
-    }
     // move the node to the tail
     push_back(remove(map_[key]));
     return map_[key]->buf__;
@@ -123,40 +111,52 @@ FileLRU::BufferPtr FileLRU::get(ino_t key, time_t* mtime) {
   return nullptr;
 }
 
-void FileLRU::put(ReadFile& file) {
-  // check if the file is oversized
-  ino_t key = file.stat().st_ino;
+FileLRU::BufferPtr FileLRU::put(const std::string& key) {
+  std::filesystem::path full_path = path_ / std::filesystem::path(key).lexically_relative("/");
+
+  // check existence
+  if (!std::filesystem::exists(full_path)) {
+    throw std::filesystem::filesystem_error("FileUtil::FileLRU::put(), file not exist: " + full_path.string(),
+                                            std::make_error_code(std::errc::no_such_file_or_directory));
+  }
+
+  // read the file
+  ReadFile file(full_path);
   file.read();
   BufferPtr value = file.data();
+
+  // check if the file is oversized
   if (value->readableBytes() > capacity_) {
     throw std::runtime_error("FileUtil::FileLRU::put(), file size exceeds capacity");
   }
 
-  if (map_.count(key)) {  // if put existed key with different value
-    // update size_
-    size_ -= map_[key]->buf__->readableBytes();
-    size_ += value->readableBytes();
+  if (map_.count(key)) {                         // if insert existed key with different value
+    size_ -= map_[key]->buf__->readableBytes();  // update size_
+    size_ += value->readableBytes();             // update size_
 
     map_[key]->buf__ = value;
     push_back(remove(map_[key]));
   } else {
-    // update size_
-    size_ += value->readableBytes();
+    size_ += value->readableBytes();  // update size_
 
-    Node* tmp = new Node{key, file.stat().st_mtim.tv_sec, value};
+    Node* tmp = new Node{key, value};
 
-    if (size_ > capacity_) {  // if new size exceeds capacity
-      // remove the least recently used node until the size is less than capacity
+    // if the cache is full, remove the least recently used node
+    if (size_ > capacity_) {
+      // keep removing the least recently used node until the size is less than capacity
       do {
         map_.erase(head_->next__->key__);
         Node* tmp = remove(head_->next__);
-        size_ -= tmp->buf__->readableBytes();
+        size_ -= tmp->buf__->readableBytes();  // update size_
         delete tmp;
       } while (size_ > capacity_);
     }
+
+    // insert the new node to the tail
     map_[key] = tmp;
     push_back(tmp);
   }
+  return value;
 }
 
 void FileLRU::push_back(Node* node) {
