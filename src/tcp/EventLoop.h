@@ -44,6 +44,7 @@ class EventLoop {
   bool isLocalThread();
 
   void callOrQueue(std::function<void()> cb);
+  void queueFunctor(std::function<void()> cb);
 
   std::shared_ptr<Timer> runAt(TimeStamp time, std::function<void()> cb);
   std::shared_ptr<Timer> runAfter(double delay, std::function<void()> cb);

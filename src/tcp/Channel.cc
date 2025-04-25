@@ -51,8 +51,6 @@ void Channel::handleEvent() const {
   std::shared_ptr<TCPConnection> use_count_lock;
   if (isConnection_) {
     use_count_lock = tcpConnection_.lock();
-    // TODO(wzy) there can be Acceptor->Channel->handleEvent(), and Acceptor will not set the tcpConnection_ in the
-    // Channel, we must find a way to detect whether the caller is an Acceptor
     if (!use_count_lock) {  // if failed to promote the weak_ptr to shared_ptr
       LOG_ERROR << "Channel::handleEvent, failed to exec tcpConnection_.lock(), it's unsafe to continue";
       return;

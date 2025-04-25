@@ -31,10 +31,18 @@ class Channel {
 
  public:
   DISABLE_COPYING_AND_MOVING(Channel);
+  /// @brief Channel constructor
+  /// @param fd fd to monitor
+  /// @param loop EventLoop to which this Channel belongs
+  /// @param enableReading listen for read events
+  /// @param enableWriting listen for write events
+  /// @param useET use edge-triggered mode
+  /// @param is_connection is this a channel belongs to a TCPConnection
   Channel(int fd, EventLoop* loop, bool enableReading, bool enableWriting, bool useET, bool is_connection);
   ~Channel();
 
-  /// @brief call epoll_ctl
+  /// @brief after creating a Channel or update the listening event, use this to call the epoll_ctl to actually register
+  /// it into epoll
   void flushEvent();
 
   void handleEvent() const;

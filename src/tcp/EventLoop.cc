@@ -46,7 +46,6 @@ EventLoop::EventLoop()
   wakefd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   // create Channel with eventfd and register it into current EventLoop
   wakeChannel_ = std::make_unique<Channel>(wakefd_, this, true, false, true, false);
-  // set
   wakeChannel_->setReadCallback([this]() {
     uint64_t val;
     ssize_t bytes_read = ::read(wakefd_, &val, sizeof(val));
@@ -81,7 +80,7 @@ void EventLoop::deleteChannel(Channel* channel) const { poller_->deleteChannel(c
 bool EventLoop::isLocalThread() { return tid_ == CurrentThread::gettid(); }
 
 void EventLoop::callOrQueue(std::function<void()> cb) {
-  if (isLocalThread()) {  //
+  if (isLocalThread()) {  // caller is the same thread that created this EventLoop
     cb();
   } else {
     // add to the pendingFunctors_
@@ -92,6 +91,16 @@ void EventLoop::callOrQueue(std::function<void()> cb) {
     // inform the eventfd (wakefd_)
     wake();
   }
+}
+
+void EventLoop::queueFunctor(std::function<void()> cb) {
+  // add to the pendingFunctors_
+  {
+    std::unique_lock<std::mutex> lock(pendingFunctorsMutex_);
+    pendingFunctors_.emplace_back(std::move(cb));
+  }
+  // inform the eventfd (wakefd_)
+  wake();
 }
 
 std::shared_ptr<Timer> EventLoop::runAt(TimeStamp time, std::function<void()> cb) {

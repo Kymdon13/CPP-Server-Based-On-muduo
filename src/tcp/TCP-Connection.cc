@@ -69,7 +69,8 @@ TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_
   // create Channel
   channel_ = std::make_unique<Channel>(connection_fd, loop, true, false, true, true);  // Reading, ET by default
   /**
-   *  set the Channel->read_callback_
+   *  set the Channel->read_callback_, EPOLLIN will trigger when the read buffer of the socket turns from empty to not
+   * empty
    */
   channel_->setReadCallback([this]() {
     refreshTimeStamp();
@@ -85,7 +86,8 @@ TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_
     }
   });
   /**
-   * * set the Channel->write_callback_
+   * * set the Channel->write_callback_, EPOLLOUT will trigger when the write buffer of the socket turns from full to
+   * not full
    */
   channel_->setWriteCallback([this]() {
     refreshTimeStamp();

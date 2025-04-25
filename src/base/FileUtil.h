@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -36,12 +37,12 @@ class ReadFile {
   using BufferPtr = std::shared_ptr<Buffer>;
 
   DISABLE_COPYING_AND_MOVING(ReadFile);
-  explicit ReadFile(const std::filesystem::path& path, bool binary = false)
-      : path_(path), binary_(binary), data_(nullptr) {
+  explicit ReadFile(const std::filesystem::path& path) : path_(path), data_(nullptr) {
     memset(&stat_, 0, sizeof(stat_));
   }
   ~ReadFile() {}
 
+  bool is_text_file() const;
   void read();
   std::filesystem::path path() const { return path_; }
   BufferPtr& data() { return data_; }
@@ -53,7 +54,6 @@ class ReadFile {
  private:
   std::filesystem::path path_;
   struct stat stat_;
-  bool binary_;
   BufferPtr data_;
 };
 
@@ -91,6 +91,13 @@ class FileLRU {
   /// @return
   BufferPtr getFile(std::filesystem::path request_path);
 
+  // use absolute path uniformly
+  void addFile(const std::filesystem::path& path);
+  void delFile(const std::filesystem::path& path);
+  void delDir(const std::filesystem::path& path);
+  void moveFile(const std::filesystem::path& old_path, const std::filesystem::path& new_path);
+  void moveDir(const std::filesystem::path& old_path, const std::filesystem::path& new_path);
+
  private:
   void push_back(Node* node);
   void push_front(Node* node);
@@ -102,7 +109,7 @@ class FileLRU {
   std::filesystem::path path_;
   size_t size_ = 0;      // current file size in bytes
   size_t capacity_ = 0;  // max file size in bytes
-  std::mutex mtx_;
+  std::shared_mutex rw_mtx_;
   std::unordered_map<std::string, Node*> map_;
   Node* head_;  // points to least recently used
   Node* tail_;  // points to most recently used

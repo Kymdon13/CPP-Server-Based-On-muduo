@@ -1,11 +1,15 @@
 #include "FileUtil.h"
 
 #include <fstream>
+#include <list>
+#include <set>
 #include <stdexcept>
 
+namespace fs = std::filesystem;
+
 AppendFile::AppendFile(const std::string& path) : fp_(nullptr), written_bytes_(0) {
-  std::filesystem::path filepath(path);
-  std::filesystem::create_directories(filepath.parent_path());
+  fs::path filepath(path);
+  fs::create_directories(filepath.parent_path());
   fp_ = ::fopen(filepath.string().c_str(), "ae");
   // set buffer to reduce io
   ::setbuffer(fp_, buffer_, sizeof(buffer_));
@@ -34,19 +38,32 @@ size_t AppendFile::write(const char* buf, size_t len) {
   return ::fwrite_unlocked(buf, 1, len, fp_);
 }
 
+bool ReadFile::is_text_file() const {
+  static const std::set<std::string> text_extensions = {// HTML/CSS/JS
+                                                        ".js", ".html", ".htm", ".css",
+                                                        // config or data
+                                                        ".json", ".env", ".xml", ".csv", ".txt", ".md", ".pug", ".ts",
+                                                        ".jsx", ".tsx", ".yml", ".yaml",
+                                                        // code
+                                                        ".c", ".cc", ".cpp", ".h", ".hpp", ".java", ".py", ".sh"};
+  std::string ext = path_.extension().string();
+  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+  return text_extensions.count(ext) > 0;
+};
+
 void ReadFile::read() {
   std::ifstream ifs;
-  if (binary_) {
-    ifs.open(path_, std::ios::binary);
-  } else {
+  if (is_text_file()) {
     ifs.open(path_);
+  } else {
+    ifs.open(path_, std::ios::binary);
   }
   if (!ifs.is_open()) {
-    throw std::filesystem::filesystem_error("FileUtil::ReadFile::read(), failed to open file: " + path_.string(),
-                                            std::make_error_code(std::errc::no_such_file_or_directory));
+    throw fs::filesystem_error("FileUtil::ReadFile::read(), failed to open file: " + path_.string(),
+                               std::make_error_code(std::errc::no_such_file_or_directory));
   }
   // get file size
-  size_t fileSize = std::filesystem::file_size(path_);
+  size_t fileSize = fs::file_size(path_);
   // preallocate string to hold the file content
   data_ = std::make_shared<Buffer>(fileSize, 0);
 
@@ -83,8 +100,7 @@ void ReadFile::read() {
 //   return st;
 // }
 
-FileLRU::BufferPtr FileLRU::getFile(std::filesystem::path request_path) {
-  std::unique_lock<std::mutex> lock(mtx_);
+FileLRU::BufferPtr FileLRU::getFile(fs::path request_path) {
   try {
     BufferPtr value = get(request_path.string());
     if (value) {
@@ -92,7 +108,7 @@ FileLRU::BufferPtr FileLRU::getFile(std::filesystem::path request_path) {
     } else {
       return put(request_path.string());
     }
-  } catch (const std::filesystem::filesystem_error& e) {
+  } catch (const fs::filesystem_error& e) {
     LOG_ERROR << e.what();
   } catch (const std::system_error& e) {
     LOG_ERROR << e.what();
@@ -103,6 +119,7 @@ FileLRU::BufferPtr FileLRU::getFile(std::filesystem::path request_path) {
 }
 
 FileLRU::BufferPtr FileLRU::get(const std::string& key) {
+  std::shared_lock<std::shared_mutex> lock(rw_mtx_);
   if (map_.count(key)) {
     // move the node to the tail
     push_back(remove(map_[key]));
@@ -112,12 +129,18 @@ FileLRU::BufferPtr FileLRU::get(const std::string& key) {
 }
 
 FileLRU::BufferPtr FileLRU::put(const std::string& key) {
-  std::filesystem::path full_path = path_ / std::filesystem::path(key).lexically_relative("/");
+  std::unique_lock<std::shared_mutex> lock(rw_mtx_);
+  fs::path full_path;
+  if (key[0] == '/') {
+    full_path = path_ / fs::path(key).relative_path();
+  } else {
+    full_path = path_ / key;
+  }
 
   // check existence
-  if (!std::filesystem::exists(full_path)) {
-    throw std::filesystem::filesystem_error("FileUtil::FileLRU::put(), file not exist: " + full_path.string(),
-                                            std::make_error_code(std::errc::no_such_file_or_directory));
+  if (!fs::exists(full_path)) {
+    throw fs::filesystem_error("FileUtil::FileLRU::put(), file not exist: " + full_path.string(),
+                               std::make_error_code(std::errc::no_such_file_or_directory));
   }
 
   // read the file
@@ -157,6 +180,77 @@ FileLRU::BufferPtr FileLRU::put(const std::string& key) {
     push_back(tmp);
   }
   return value;
+}
+
+/**
+ * for inotify usage
+ */
+void FileLRU::addFile(const fs::path& path) {
+  try {
+    // get path relative to static path
+    fs::path relative_path = fs::relative(path, path_);
+    std::string key = '/' + relative_path.string();  // make sure the key starts with '/'
+    put(key);
+  } catch (const fs::filesystem_error& e) {
+    LOG_ERROR << e.what();
+  } catch (const std::system_error& e) {
+    LOG_ERROR << e.what();
+  } catch (const std::runtime_error& e) {
+    LOG_ERROR << e.what();
+  }
+}
+void FileLRU::delFile(const std::filesystem::path& path) {
+  std::unique_lock<std::shared_mutex> lock(rw_mtx_);
+  fs::path relative_path = fs::relative(path, path_);
+  std::string key = '/' + relative_path.string();  // make sure the key starts with '/'
+  if (map_.count(key)) {
+    Node* node = map_[key];
+    size_ -= node->buf__->readableBytes();  // update size_
+    delete remove(node);
+    map_.erase(key);
+  }
+}
+void FileLRU::delDir(const std::filesystem::path& path) {
+  std::unique_lock<std::shared_mutex> lock(rw_mtx_);
+  fs::path relative_path = fs::relative(path, path_);
+  std::string key = '/' + relative_path.string();  // make sure the key starts with '/'
+  for (auto it = map_.begin(); it != map_.end();) {
+    if (it->first.find(key) == 0) {  // if the key starts with the path
+      Node* node = it->second;
+      size_ -= node->buf__->readableBytes();  // update size_
+      delete remove(node);
+      it = map_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+void FileLRU::moveFile(const std::filesystem::path& old_path, const std::filesystem::path& new_path) {
+  std::unique_lock<std::shared_mutex> lock(rw_mtx_);
+  std::string old_key = '/' + fs::relative(old_path, path_).string();  // make sure the key starts with '/'
+  std::string new_key = '/' + fs::relative(new_path, path_).string();  // make sure the key starts with '/'
+  if (map_.count(old_key)) {
+    Node* node = map_[old_key];
+    map_.erase(old_key);
+    map_[new_key] = node;
+  }
+}
+void FileLRU::moveDir(const std::filesystem::path& old_path, const std::filesystem::path& new_path) {
+  std::unique_lock<std::shared_mutex> lock(rw_mtx_);
+  std::string old_key = '/' + fs::relative(old_path, path_).string();  // make sure the key starts with '/'
+  std::string new_key = '/' + fs::relative(new_path, path_).string();  // make sure the key starts with '/'
+  std::list<std::pair<std::string, Node*>> adding_list;
+  for (auto it = map_.begin(); it != map_.end();) {
+    if (it->first.find(old_key) == 0) {  // if the key starts with the path
+      adding_list.emplace_back(std::make_pair(new_path / old_path.filename(), it->second));
+      it = map_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  for (auto& it : adding_list) {
+    map_[it.first] = it.second;
+  }
 }
 
 void FileLRU::push_back(Node* node) {
