@@ -6,6 +6,26 @@
 #include <string>
 #include <utility>
 
+void HTTPResponse::setContentType(const std::string& content_type) {
+  if (content_type == ".css") {
+    setContentType(ContentType::text_css);
+  } else if (content_type == ".js") {
+    setContentType(ContentType::text_js);
+  } else if (content_type == ".png") {
+    setContentType(ContentType::image_png);
+  } else if (content_type == ".jpg") {
+    setContentType(ContentType::image_jpg);
+  } else if (content_type == ".gif") {
+    setContentType(ContentType::image_gif);
+  } else if (content_type == ".ico") {
+    setContentType(ContentType::image_ico);
+  } else if (content_type == ".md") {
+    setContentType(ContentType::text_md);
+  } else {
+    setContentType(ContentType::text_plain);
+  }
+}
+
 std::string HTTPResponse::statusToString(Status stat) {
   switch (stat) {
     case Status::Continue:
@@ -49,6 +69,8 @@ std::string HTTPResponse::contentTypeToString(ContentType type) {
       return "image/gif";
     case ContentType::image_ico:
       return "image/x-icon";
+    case ContentType::application_octet_stream:
+      return "application/octet-stream";
     default:
       return "text/plain; charset=utf-8";
   }

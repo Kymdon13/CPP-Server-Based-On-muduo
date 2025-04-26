@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <list>
 #include <memory>
 #include <string>
 
@@ -33,6 +34,14 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   Buffer inBuffer_;
   // store data that TCPConnection::send hasn't sent
   Buffer outBuffer_;
+  /* files waiting list (waiting to use sendfile() to send) */
+  typedef struct FileInfo {
+    int fd__;
+    off_t size__;
+    off_t sent__;
+    FileInfo(int fd, off_t size, off_t sent) : fd__(fd), size__(size), sent__(sent){};
+  } FileInfo;
+  std::list<FileInfo> file_list_;
 
   std::function<void(std::shared_ptr<TCPConnection>)> on_close_callback_;
   std::function<void(std::shared_ptr<TCPConnection>)> on_connection_callback_;
@@ -68,6 +77,7 @@ class TCPConnection : public std::enable_shared_from_this<TCPConnection> {
   /// @brief main sending interface for user
   void send(const std::string& msg);
   void send(const char* msg, size_t len);
+  void sendFile(int file_fd);
 
   /// @brief call on_close_callback_
   void handleClose();

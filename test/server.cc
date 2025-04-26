@@ -14,6 +14,7 @@
 
 #include "base/CurrentThread.h"
 #include "base/FileUtil.h"
+#include "base/Exception.h"
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 #include "http/HTTP-Server.h"
@@ -45,31 +46,69 @@ int main() {
         res->setStatus(Status::OK);
         res->setContentType(ContentType::text_html);
         res->setBody(server->getFile("/linux_cmd.html"));
-      } else {
-        std::shared_ptr<Buffer> buf = server->getFile(url);
-        if (buf == nullptr) {
-          res->setStatus(Status::NotFound);
-          res->setClose(true);
-          return;
+      } else if (url.find("/download") == 0) {
+        // TODO check the file size, if it's too big, use sendFile instead
+        std::shared_ptr<Buffer> buf;
+        try {
+          buf = server->getFile(url);
+          if (buf == nullptr) {
+            LOG_ERROR << "HTTPServer::onResponse, file not found";
+            res->setClose(true);
+            res->setStatus(Status::NotFound);
+            return;
+          }
+          res->setBody(buf);
+          res->setStatus(Status::OK);
+          res->setContentType(ContentType::application_octet_stream);
+          res->addHeader("Content-Disposition", "attachment; filename=" + fs::path(url).filename().string());
+        } catch (const bigfile_error& e) {
+          fs::path file_path = g_staticPath / fs::path(url).relative_path();
+          int file_fd = ::open(file_path.c_str(), O_RDONLY);
+          if (file_fd == -1) {
+            LOG_ERROR << "TCPConnection::sendFile, open file failed: " << file_path;
+            res->setClose(true);
+            res->setStatus(Status::NotFound);
+            return;
+          }
+          struct stat st;
+          ::fstat(file_fd, &st);
+
+          res->setBigFile(file_fd);
+          res->setStatus(Status::OK);
+          res->setContentType(ContentType::application_octet_stream);
+          res->addHeader("Content-Length", std::to_string(st.st_size));
+          res->addHeader("Content-Disposition", "attachment; filename=" + fs::path(url).filename().string());
         }
-        res->setBody(buf);
-        res->setStatus(Status::OK);
-        if (fs::path(url).extension().string() == ".css") {
-          res->setContentType(ContentType::text_css);
-        } else if (fs::path(url).extension().string() == ".js") {
-          res->setContentType(ContentType::text_js);
-        } else if (fs::path(url).extension().string() == ".png") {
-          res->setContentType(ContentType::image_png);
-        } else if (fs::path(url).extension().string() == ".jpg") {
-          res->setContentType(ContentType::image_jpg);
-        } else if (fs::path(url).extension().string() == ".gif") {
-          res->setContentType(ContentType::image_gif);
-        } else if (fs::path(url).extension().string() == ".ico") {
-          res->setContentType(ContentType::image_ico);
-        } else if (fs::path(url).extension().string() == ".md") {
-          res->setContentType(ContentType::text_md);
-        } else {
-          res->setContentType(ContentType::text_plain);
+      } else {
+        std::shared_ptr<Buffer> buf;
+        try {
+           buf = server->getFile(url);
+           if (buf == nullptr) {
+             LOG_ERROR << "HTTPServer::onResponse, file not found";
+             res->setClose(true);
+             res->setStatus(Status::NotFound);
+             return;
+           }
+           res->setBody(buf);
+           res->setStatus(Status::OK);
+           res->setContentType(fs::path(url).extension().string());
+        } catch (const bigfile_error& e) {
+          fs::path file_path = g_staticPath / fs::path(url).relative_path();
+          int file_fd = ::open(file_path.c_str(), O_RDONLY);
+          if (file_fd == -1) {
+            LOG_ERROR << "TCPConnection::sendFile, open file failed: " << file_path;
+            res->setClose(true);
+            res->setStatus(Status::NotFound);
+            return;
+          }
+          struct stat st;
+          ::fstat(file_fd, &st);
+
+          res->setBigFile(file_fd);
+          res->setStatus(Status::OK);
+          res->setContentType(ContentType::application_octet_stream);
+          res->addHeader("Content-Length", std::to_string(st.st_size));
+          res->addHeader("Content-Disposition", "attachment; filename=" + fs::path(url).filename().string());
         }
       }
     } else {

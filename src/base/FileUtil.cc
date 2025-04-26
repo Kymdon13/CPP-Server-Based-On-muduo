@@ -5,6 +5,8 @@
 #include <set>
 #include <stdexcept>
 
+#include "Exception.h"
+
 namespace fs = std::filesystem;
 
 AppendFile::AppendFile(const std::string& path) : fp_(nullptr), written_bytes_(0) {
@@ -108,7 +110,7 @@ FileLRU::BufferPtr FileLRU::getFile(fs::path request_path) {
     } else {
       return put(request_path.string());
     }
-  } catch (const fs::filesystem_error& e) {
+  } catch (const fs::filesystem_error& e) {  // not catch bigfile_error here, let developer handle it
     LOG_ERROR << e.what();
   } catch (const std::system_error& e) {
     LOG_ERROR << e.what();
@@ -142,16 +144,15 @@ FileLRU::BufferPtr FileLRU::put(const std::string& key) {
     throw fs::filesystem_error("FileUtil::FileLRU::put(), file not exist: " + full_path.string(),
                                std::make_error_code(std::errc::no_such_file_or_directory));
   }
+  // check if the file is oversized
+  if (fs::file_size(full_path) > capacity_) {
+    throw bigfile_error("FileUtil::FileLRU::put(), file size exceeds capacity");
+  }
 
   // read the file
   ReadFile file(full_path);
   file.read();
   BufferPtr value = file.data();
-
-  // check if the file is oversized
-  if (value->readableBytes() > capacity_) {
-    throw std::runtime_error("FileUtil::FileLRU::put(), file size exceeds capacity");
-  }
 
   if (map_.count(key)) {                         // if insert existed key with different value
     size_ -= map_[key]->buf__->readableBytes();  // update size_

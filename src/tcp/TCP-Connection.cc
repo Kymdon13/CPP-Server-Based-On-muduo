@@ -1,6 +1,9 @@
 #include "TCP-Connection.h"
 
+#include <fcntl.h>
 #include <string.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <iostream>
@@ -95,6 +98,7 @@ TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_
       LOG_ERROR << "TCPConnection::write_callback_ called while the TCPConnection::state_ == TCPState::Disconnected";
       return;
     }
+    /* write outBuffer_ */
     ssize_t flag = writeNonBlocking();
     if (flag == -1) {
       LOG_ERROR << "TCPConnection::writeNonBlocking error";
@@ -102,11 +106,33 @@ TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_
       // nothing to write
       LOG_DEBUG << "TCPConnection::writeNonBlocking write nothing";
     }
-    // disable writing if there is no data left in the outBuffer_
-    if (outBuffer_.readableBytes() == 0) {
+    /* write file using sendfile() */
+    /* note that it is possible the sendfile does not fill the write buffer at onece,
+    if first FileInfo has only a few bytes to send, after we send it we can pop it out
+    and move on to the next FileInfo */
+    while (!file_list_.empty()) {
+      auto& file_info = file_list_.front();
+      off_t sent_once = ::sendfile(fd_, file_info.fd__, &file_info.sent__, file_info.size__ - file_info.sent__);
+      if (sent_once < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {  // the tcp write buffer is full, write nothing
+          break;
+        } else {
+          LOG_ERROR << "TCPConnection::write_callback_ sendfile error";
+          handleClose();
+          return;
+        }
+      }
+      if (file_info.sent__ >= file_info.size__) {
+        ::close(file_info.fd__);
+        file_list_.pop_front();
+      }
+    }
+    // disable writing if done writing the outBuffer_ and sending the file_list_
+    if (outBuffer_.readableBytes() == 0 && file_list_.empty()) {
       channel_->disableWriting();
     }
   });
+
   // notice that we will call channel_->flushEvent() in enableConnection()
 }
 
@@ -130,14 +156,11 @@ void TCPConnection::enableConnection() {
 
 void TCPConnection::send(const std::string& msg) { send(msg.c_str(), msg.size()); }
 void TCPConnection::send(const char* msg, size_t len) {
-  int left = len;
-  if (state_ == TCPState::Disconnected) {
-    LOG_WARN << "TCPConnection::send called while the TCPConnection::state_ == TCPState::Disconnected";
-    return;
-  }
-  // if channel is not writing, means we have data left in the last write
+  ssize_t sent = 0;
+  size_t left = len;
+  // if isWriting() returns true, means we have data left in the last write,
   if (!channel_->isWriting() && outBuffer_.readableBytes() == 0) {
-    ssize_t sent = ::write(fd_, msg, len);
+    sent = ::write(fd_, msg, len);
     if (sent >= 0) {  // written some bytes
       left -= sent;
     } else {
@@ -148,11 +171,37 @@ void TCPConnection::send(const char* msg, size_t len) {
         return;
       }
     }
-    if (left > 0) {  // still have some bytes left in the msg
-      outBuffer_.append(msg + sent, left);
-      // let the Channel::write_callback_ to write the rest
-      channel_->enableWriting();
+  }
+  // if we have bytes left in the msg, put it into outBuffer_
+  if (left > 0) {
+    outBuffer_.append(msg + sent, left);
+    // let the Channel::write_callback_ to write the rest
+    if (!channel_->isWriting()) channel_->enableWriting();
+  }
+}
+void TCPConnection::sendFile(int file_fd) {
+  struct stat st;
+  ::fstat(file_fd, &st);
+
+  off_t sent_total = 0;
+  if (!channel_->isWriting() && file_list_.empty()) {
+    ssize_t sent_once = ::sendfile(fd_, file_fd, &sent_total, st.st_size - sent_total);
+    if (sent_once < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {  // the tcp write buffer is full, write nothing
+        sent_once = 0;
+      } else {
+        LOG_ERROR << "TCPConnection::sendFile, sendfile error";
+        handleClose();
+        return;
+      }
     }
+  }
+  // if we haven't sent them all, put the fd and sent_total into the file_list_
+  if (sent_total < st.st_size) {
+    file_list_.emplace_back(file_fd, st.st_size, sent_total);
+    channel_->enableWriting();
+  } else {
+    ::close(file_fd);
   }
 }
 

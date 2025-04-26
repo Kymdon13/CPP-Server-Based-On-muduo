@@ -30,7 +30,8 @@ class HTTPResponse {
     image_jpg,
     image_png,
     image_gif,
-    image_ico
+    image_ico,
+    application_octet_stream
   };
 
  private:
@@ -43,16 +44,21 @@ class HTTPResponse {
   std::shared_ptr<Buffer> body_;
   // response_ = response line + headers + body
   std::shared_ptr<Buffer> response_;
+  int big_file_fd_ = -1;
 
  public:
   HTTPResponse(bool close, Status status = Status::OK)
       : close_(close), status_(status), body_(nullptr), response_(nullptr) {}
   ~HTTPResponse() {}
 
+  void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
   void setStatus(Status status) { status_ = status; }
   void setContentType(ContentType content_type) { addHeader("Content-Type", contentTypeToString(content_type)); }
+  void setContentType(const std::string& content_type);
   void addHeader(const std::string& key, const std::string& value) { headers_[key] = value; }
-  void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
+  void setBigFile(int fd) { big_file_fd_ = fd; }
+  int bigFile() const { return big_file_fd_; }
+
   bool isClose() { return close_; }
   void setClose(bool close) { close_ = close; }
 

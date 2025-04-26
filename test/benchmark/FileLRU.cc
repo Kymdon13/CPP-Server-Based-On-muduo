@@ -15,8 +15,6 @@
 
 #include "base/FileUtil.h"
 
-std::atomic<bool> ready(false);
-
 void server(int port) {
   /* create server */
   int serv_fd = socket(AF_INET, SOCK_STREAM, 0);

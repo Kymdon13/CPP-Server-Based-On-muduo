@@ -112,7 +112,12 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
         HTTPResponse res(is_clnt_want_to_close);
         // set the res according to the request
         on_response_callback_(req, &res);
-        conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
+        if (res.bigFile() < 0) {  // no big file
+          conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
+        } else {  // needs to send big file
+          conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
+          conn->sendFile(res.bigFile());
+        }
         // reset the state of the parser and the snapshot_
         http_context_->reset();
         if (res.isClose()) {  // if the client wish to close connection
