@@ -126,6 +126,8 @@ TCPConnection::TCPConnection(EventLoop* loop, int connection_fd, int connection_
         ::close(file_info.fd__);
         file_list_.pop_front();
       }
+      // update the workload of EventLoop
+      loop_->workload()->left_bytes_.fetch_sub(sent_once);
     }
     // disable writing if done writing the outBuffer_ and sending the file_list_
     if (outBuffer_.readableBytes() == 0 && file_list_.empty()) {
@@ -203,6 +205,8 @@ void TCPConnection::sendFile(int file_fd) {
   } else {
     ::close(file_fd);
   }
+  // update the workload of EventLoop
+  loop_->workload()->left_bytes_.fetch_add(st.st_size - sent_total);
 }
 
 // EventLoop::pendingFunctors_
@@ -212,6 +216,14 @@ void TCPConnection::handleClose() {
     return;
   }
   state_ = TCPState::Disconnected;
+  // update the connection count of EventLoop
+  loop_->workload()->connections_.fetch_sub(1);
+  // close the opened file
+  for (auto& file_info : file_list_) {
+    loop_->workload()->left_bytes_.fetch_sub(file_info.size__ - file_info.sent__);
+    ::close(file_info.fd__);
+  }
+  // remove conn from conn_map_, close the channel_
   if (on_close_callback_) {
     on_close_callback_(shared_from_this());
   } else {

@@ -15,7 +15,6 @@ class ThreadPool {
 
   std::vector<std::unique_ptr<Thread>> threads_;
   size_t n_threads_;
-  size_t whichSubReactor_{0};
 
   std::vector<std::shared_ptr<EventLoop>> loops_;
 

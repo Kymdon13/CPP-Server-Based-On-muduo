@@ -14,11 +14,21 @@ void ThreadPool::init() {
 }
 
 EventLoop* ThreadPool::getSubReactor() {
-  if (!loops_.empty()) {
-    ++whichSubReactor_;
-    whichSubReactor_ %= loops_.size();
-    return loops_[whichSubReactor_].get();
+  size_t min_load = SIZE_MAX;
+  EventLoop* min_loop = nullptr;
+  for (auto &loop : loops_) {
+    size_t load = loop->load();
+    if (load < min_load) {
+      min_load = load;
+      min_loop = loop.get();
+    }
   }
   // if there is not any sub reactors in the loops_, then main reactor will do the work
-  return mainReactor_.get();
+  if (min_loop == nullptr) {
+    return mainReactor_.get();
+  } else {
+    // add 1 connection to the workload of fetched EventLoop
+    min_loop->workload()->connections_.fetch_add(1);
+    return min_loop;
+  }
 }
