@@ -39,6 +39,8 @@ bool HTTPRequest::setMethod(const std::string& method) {
     method_ = Method::HEAD;
   } else if (method == "POST") {
     method_ = Method::POST;
+  } else if (method == "OPTIONS") {
+    method_ = Method::OPTIONS;
   } else {
     method_ = Method::Invalid;
   }
@@ -55,6 +57,9 @@ std::string HTTPRequest::methodAsString() const {
       break;
     case Method::POST:
       return "POST";
+      break;
+    case Method::OPTIONS:
+      return "OPTIONS";
       break;
     default:
       return "Invalid";

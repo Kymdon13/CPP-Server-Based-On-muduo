@@ -14,9 +14,12 @@
 #include <unordered_map>
 #include <vector>
 
+// #include "base/gRPC-ExecutorClient.hpp"
 #include "base/CurrentThread.h"
 #include "base/FileUtil.h"
 #include "base/Exception.h"
+#include "base/json.hpp"
+#include "base/Executor.h"
 #include "http/HTTP-Request.h"
 #include "http/HTTP-Response.h"
 #include "http/HTTP-Server.h"
@@ -27,7 +30,6 @@
 #include "tcp/TCP-Server.h"
 #include "tcp/Thread.h"
 #include "tcp/ThreadPool.h"
-#include "base/json.hpp"
 
 namespace fs = std::filesystem;
 const fs::path g_staticPath = "/home/wzy/code/cpp-server/static/";
@@ -35,7 +37,9 @@ const fs::path g_staticPath = "/home/wzy/code/cpp-server/static/";
 using HandleFunc = std::function<void(const HTTPRequest*, HTTPResponse*)>;
 using json = nlohmann::json;
 
-std::unordered_map<std::string, HandleFunc> g_routes;
+// global variables
+std::map<std::string, HandleFunc> g_routes;
+// grpc::ExecutorClient g_executor;
 
 void addRoute(const std::string& method, const std::string& path, HandleFunc func) {
   g_routes[method + path] = func;  // directly use method + path as the key
@@ -89,26 +93,70 @@ void setupRoutes(HTTPServer* server) {
     }
   });
 
+  /* allow redirect request from other website */
+  addRoute("OPTIONS", "/evaluate.json", [](const HTTPRequest* req, HTTPResponse* res) {
+    (void) req;
+    res->setStatus(HTTPResponse::Status::NoContent);
+    res->addHeader("access-control-allow-origin", "*");
+    res->addHeader("access-control-allow-methods", "POST, GET, OPTIONS");
+    res->addHeader("access-control-allow-headers", "Host, Origin, Referer, Connection, Content-Type, Content-Length");
+  });
+
   addRoute("POST", "/evaluate.json", [](const HTTPRequest* req, HTTPResponse* res) {
     std::cout << "=======================================================" << std::endl;
     for (auto it = req->headers().begin(); it != req->headers().end(); ++it) {
       std::cout << "Header: " << it->first << ": " << it->second << std::endl;
     }
     std::cout << "=======================================================" << std::endl;
-    json body = json::parse(req->body());
-    std::cout << "version: " << body["version"].get<std::string>() << std::endl;
-    std::cout << "optimize: " << body["optimize"].get<int>() << std::endl;
-    std::cout << "code: " << body["code"].get<std::string>() << std::endl;
-    std::cout << "edition: " << body["edition"].get<int>() << std::endl;
+    json json_req;
+    try {
+      json_req = json::parse(req->body());
+      // std::cout << "version: " << json_req["version"].get<std::string>() << std::endl;
+      // std::cout << "optimize: " << json_req["optimize"].get<std::string>() << std::endl;
+      std::cout << "code: " << json_req["code"].get<std::string>() << std::endl;
+      std::cout << "edition: " << json_req["edition"].get<std::string>() << std::endl;
+    std::cout << "=======================================================" << std::endl;
+    } catch (const std::exception& e) {
+      LOG_ERROR << "JSON parse error: " << e.what();
+      res->setClose(true);
+      res->setStatus(HTTPResponse::Status::BadRequest);
+      res->setBody(std::make_shared<Buffer>("Invalid JSON"));
+      return;
+    }
 
-    std::fstream file("main.cc", std::ios::out | std::ios::trunc);  // trunc to clear or create the file
-    file << "// This is a test file\n";
-    file << "#include <iostream>\n";
-    file << "#include <string>\n";
-    file << body["code"].get<std::string>();
+    // if (code.empty()) {
+    //   result_.exit_code = -1;
+    // }
+    // if (code.size() > 10 * 1024) {
+    //   result_.exit_code = -2;
+    //   result_.stdout_str = "Code is too long";
+    //   result_.stderr_str = "";
+    // }
 
-    res->setClose(true);
     res->setStatus(HTTPResponse::Status::OK);
+    res->setContentType(ContentType::application_json);
+    res->addHeader("access-control-allow-origin", "*");
+
+    // call the executor
+    Executor executor;
+    executor.exec(json_req["code"].get<std::string>());
+    ExecResult result = executor.result();
+
+    // serialize json as response
+    nlohmann::ordered_json json_res;
+    if (result.exit_code == 127) {
+      json_res["result"] = "Unknown error";
+      json_res["error"] = "Unknown error";
+      res->setBody(std::make_shared<Buffer>(json_res.dump()));
+    } else {
+      json_res["result"] = result.stdout_str;
+      if (result.exit_code != 0) {  // set error if exit code is not 0
+        json_res["error"] = result.stderr_str;
+      } else {
+        json_res["error"] = json::value_t::null;
+      }
+      res->setBody(std::make_shared<Buffer>(json_res.dump()));
+    }
   });
 
   addRoute("GET", "/*", [server](const HTTPRequest* req, HTTPResponse* res) {
@@ -155,19 +203,20 @@ int main() {
   std::unique_ptr<EventLoop> loop = std::make_unique<EventLoop>();
   HTTPServer* server = new HTTPServer(loop.get(), "0.0.0.0", 5000, g_staticPath);
 
+  // gRPC server for executing code
+  // g_executor = grpc::ExecutorClient(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()));
+
   // routing the request to the right handler
   server->onResponse([](const HTTPRequest* req, HTTPResponse* res) {
     auto it = g_routes.find(req->methodAsString() + req->url());
     if (it != g_routes.end()) {
       it->second(req, res);
-    } else if (req->method() != HTTPRequest::Method::GET && req->method() != HTTPRequest::Method::POST) {
-      res->setClose(true);
-      res->setStatus(HTTPResponse::Status::NotImplemented);
     } else {  // fallback to default handler
       g_routes["GET/*"](req, res);
     }
   });
 
+  // set up routes for HTTP requests
   setupRoutes(server);
 
   server->start();

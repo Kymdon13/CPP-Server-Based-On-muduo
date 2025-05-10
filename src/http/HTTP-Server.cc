@@ -100,16 +100,23 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
       LOG_WARN << "HTTPConnection::EnableHTTPConnection, on_message_callback_ called while disconnected";
       return;
     }
+
     using ParseState = HTTPContext::ParseState;
-    HTTPContext* http_context_ = static_cast<HTTPContext*>(conn->context());
+    HTTPContext* http_context_ = static_cast<HTTPContext*>(conn->context());  // from void* to HTTPContext*
+
+    // parse the request
     ParseState return_state = http_context_->parseRequest(conn->inBuffer());
+
+    // response according to the parsed request
     switch (return_state) {
       case ParseState::COMPLETE: {
         HTTPRequest* req = http_context_->getRequest();
+
         // check if client wish to keep the connection
         std::string conn_state = req->getHeaderByKey("Connection");
         bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
         HTTPResponse res(is_clnt_want_to_close);
+
         // set the res according to the request
         on_response_callback_(req, &res);
         if (res.bigFile() < 0) {  // no big file
@@ -118,8 +125,10 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
           conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
           conn->sendFile(res.bigFile());
         }
+
         // reset the state of the parser and the snapshot_
         http_context_->reset();
+
         if (res.isClose()) {  // if the client wish to close connection
           if (conn->connectionState() == TCPState::Disconnected) {
             break;
@@ -128,6 +137,7 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
         }
         break;
       }
+
       // handle invalid cases
       case ParseState::INVALID_METHOD: {
         LOG_INFO << "HTTPConnection::EnableHTTPConnection, invalid HTTP METHOD";

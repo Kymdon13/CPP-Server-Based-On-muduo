@@ -13,6 +13,7 @@ class HTTPResponse {
   enum class Status : uint16_t {
     Continue = 100,
     OK = 200,
+    NoContent = 204,
     BadRequest = 400,
     Forbidden = 403,
     NotFound = 404,
@@ -31,12 +32,13 @@ class HTTPResponse {
     image_png,
     image_gif,
     image_ico,
+    application_json,
     application_octet_stream
   };
 
  private:
   bool close_;
-  HTTPRequest::Version version_{HTTPRequest::Version::Invalid};
+  // HTTPRequest::Version version_{HTTPRequest::Version::Invalid};
   Status status_{Status::InternalServerError};
   std::unordered_map<std::string, std::string> headers_;
   // we use string to store the header
@@ -54,6 +56,8 @@ class HTTPResponse {
   void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
   void setStatus(Status status) { status_ = status; }
   void setContentType(ContentType content_type) { addHeader("Content-Type", contentTypeToString(content_type)); }
+  /// @brief
+  /// @param content_type suffix like ".css", ".js", etc.
   void setContentType(const std::string& content_type);
   void addHeader(const std::string& key, const std::string& value) { headers_[key] = value; }
   void setBigFile(int fd) { big_file_fd_ = fd; }

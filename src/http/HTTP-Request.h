@@ -5,7 +5,7 @@
 
 class HTTPRequest {
  public:
-  enum class Method : uint8_t { Invalid = 0, GET, HEAD, POST };
+  enum class Method : uint8_t { Invalid = 0, GET, HEAD, POST, OPTIONS };
   inline std::string methodToString(Method method) {
     switch (method) {
       case Method::GET:
@@ -14,6 +14,8 @@ class HTTPRequest {
         return "HEAD";
       case Method::POST:
         return "POST";
+      case Method::OPTIONS:
+        return "OPTIONS";
       default:
         return "Invalid";
     }

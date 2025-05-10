@@ -24,8 +24,8 @@ foreach (cppserver_test_source ${CPPSERVER_TEST_SOURCES})
     # add_dependencies(build-tests ${cppserver_test_name})
     # add_dependencies(check-tests ${cppserver_test_name})
 
-    # CPPSERVER_SHARED is defined in src/CMakeLists.txt
-    target_link_libraries(${cppserver_test_name} CPPSERVER_SHARED)
+    # CPPSERVER is defined in src/CMakeLists.txt
+    target_link_libraries(${cppserver_test_name} CPPSERVER)
 
     # set test target properties and dependencies
     set_target_properties(${cppserver_test_name}

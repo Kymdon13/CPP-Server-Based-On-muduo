@@ -69,6 +69,8 @@ std::string HTTPResponse::contentTypeToString(ContentType type) {
       return "image/gif";
     case ContentType::image_ico:
       return "image/x-icon";
+    case ContentType::application_json:
+      return "application/json";
     case ContentType::application_octet_stream:
       return "application/octet-stream";
     default:

@@ -10,11 +10,21 @@ class Buffer {
   static const size_t InitSize = 1024;
 
  public:
-  explicit Buffer(size_t initSize = InitSize, size_t cheapPrepend = 8)
+  Buffer(size_t initSize = InitSize, size_t cheapPrepend = 8)
       : CheapPrepend(cheapPrepend),
         buffer_(initSize + CheapPrepend),
         readerIndex_(CheapPrepend),
         writerIndex_(CheapPrepend) {}
+
+  Buffer(const std::string& str)
+      : CheapPrepend(0),
+        buffer_(str.size() + CheapPrepend),
+        readerIndex_(CheapPrepend),
+        writerIndex_(CheapPrepend)
+  {
+    std::copy(str.data(), str.data() + str.size(), begin() + writerIndex_);
+    writerIndex_ += str.size();
+  }
 
   void swap(Buffer& rhs) {
     buffer_.swap(rhs.buffer_);
