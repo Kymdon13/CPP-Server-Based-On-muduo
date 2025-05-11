@@ -3,7 +3,18 @@
 ### Intro
 Make an easily implemented server with cpp.
 
-### Design
+### Build
+
+Use the follow:
+
+```shell
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG"
+```
+
+to configure.
+
+And then run `ninja server` in the `build/` to build the server.
 
 ### Format of log file
 
