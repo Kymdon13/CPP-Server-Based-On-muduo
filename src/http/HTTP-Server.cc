@@ -62,8 +62,6 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
    * set TCPServer::on_connection_callback_
    */
   tcpServer_->onConnection([this](const std::shared_ptr<TCPConnection>& conn) {
-    int fd_clnt = conn->fd();
-
     // init the HTTPContext
     conn->setContext(new HTTPContext());
 
@@ -83,13 +81,14 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
       }
     }));
 
-    // print out peer's info
-    struct sockaddr_in addr_peer;
-    socklen_t addrlength_peer = sizeof(addr_peer);
-    getpeername(fd_clnt, (struct sockaddr*)&addr_peer, &addrlength_peer);
-    std::cout << "tid-" << CurrentThread::gettid() << " Connection"
-              << "[fd#" << fd_clnt << ']' << " from " << inet_ntoa(addr_peer.sin_addr) << ':'
-              << ntohs(addr_peer.sin_port) << std::endl;
+    /* print out peer's info */
+    // int fd_clnt = conn->fd();
+    // struct sockaddr_in addr_peer;
+    // socklen_t addrlength_peer = sizeof(addr_peer);
+    // getpeername(fd_clnt, (struct sockaddr*)&addr_peer, &addrlength_peer);
+    // std::cout << "tid-" << CurrentThread::gettid() << " Connection"
+    //           << "[fd#" << fd_clnt << ']' << " from " << inet_ntoa(addr_peer.sin_addr) << ':'
+    //           << ntohs(addr_peer.sin_port) << std::endl;
   });
 
   /**
@@ -110,32 +109,40 @@ HTTPServer::HTTPServer(EventLoop* loop, const char* ip, const int port, const st
     // response according to the parsed request
     switch (return_state) {
       case ParseState::COMPLETE: {
-        HTTPRequest* req = http_context_->getRequest();
-
-        // check if client wish to keep the connection
-        std::string conn_state = req->getHeaderByKey("Connection");
-        bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
-        HTTPResponse res(is_clnt_want_to_close);
-
-        // set the res according to the request
-        on_response_callback_(req, &res);
-        if (res.bigFile() < 0) {  // no big file
-          conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
-        } else {  // needs to send big file
-          conn->send(res.getResponse()->peek(), res.getResponse()->readableBytes());
-          conn->sendFile(res.bigFile());
-        }
+        HTTPRequest req = http_context_->getRequest();
 
         // reset the state of the parser and the snapshot_
         http_context_->reset();
 
-        if (res.isClose()) {  // if the client wish to close connection
-          if (conn->connectionState() == TCPState::Disconnected) {
-            break;
+        // create HTTPResponse
+        std::string conn_state = req.getHeaderByKey("Connection");
+        bool is_clnt_want_to_close = (util::toLower(conn_state) == "close");
+        HTTPResponse* res = new HTTPResponse(is_clnt_want_to_close);
+
+        // set the res according to the request
+        on_response_callback_(&req, res);
+
+        auto callback = res->getCallback();
+        if (callback != nullptr) {  // delay the conn->send, and let the callback decide when to send
+          callback(conn, res);
+          break;
+        } else {
+          if (res->bigFile() < 0) {  // no big file
+            conn->send(res->getResponse()->peek(), res->getResponse()->readableBytes());
+          } else {  // needs to send big file
+            conn->send(res->getResponse()->peek(), res->getResponse()->readableBytes());
+            conn->sendFile(res->bigFile());
           }
-          conn->handleClose();
+
+          // close the connection if needed
+          if (res->isClose() && conn->connectionState() != TCPState::Disconnected) {
+            conn->handleClose();
+          }
+
+          // don't forget to delete the res
+          delete res;
+          break;
         }
-        break;
       }
 
       // handle invalid cases

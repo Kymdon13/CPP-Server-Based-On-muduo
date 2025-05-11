@@ -68,6 +68,6 @@ class HTTPContext {
 
   void reset();
   bool isComplete();
-  HTTPRequest* getRequest();
+  HTTPRequest getRequest();
   ParseState parseRequest(Buffer* buffer);
 };

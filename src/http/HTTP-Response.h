@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -7,6 +8,7 @@
 
 #include "HTTP-Request.h"
 #include "tcp/Buffer.h"
+#include "tcp/TCP-Connection.h"
 
 class HTTPResponse {
  public:
@@ -47,6 +49,8 @@ class HTTPResponse {
   // response_ = response line + headers + body
   std::shared_ptr<Buffer> response_;
   int big_file_fd_ = -1;
+  using callback_t = std::function<void(std::shared_ptr<TCPConnection>, HTTPResponse*)>;
+  callback_t callback_ = nullptr;
 
  public:
   HTTPResponse(bool close, Status status = Status::OK)
@@ -56,15 +60,20 @@ class HTTPResponse {
   void setBody(std::shared_ptr<Buffer> body) { body_ = body; }
   void setStatus(Status status) { status_ = status; }
   void setContentType(ContentType content_type) { addHeader("Content-Type", contentTypeToString(content_type)); }
-  /// @brief
   /// @param content_type suffix like ".css", ".js", etc.
   void setContentType(const std::string& content_type);
   void addHeader(const std::string& key, const std::string& value) { headers_[key] = value; }
-  void setBigFile(int fd) { big_file_fd_ = fd; }
-  int bigFile() const { return big_file_fd_; }
 
   bool isClose() { return close_; }
   void setClose(bool close) { close_ = close; }
+
+  // big file
+  void setBigFile(int fd) { big_file_fd_ = fd; }
+  int bigFile() const { return big_file_fd_; }
+
+  // callback
+  void setCallback(callback_t callback) { callback_ = std::move(callback); }
+  auto getCallback() const { return callback_; }
 
   static std::string statusToString(Status stat);
   static std::string contentTypeToString(ContentType type);

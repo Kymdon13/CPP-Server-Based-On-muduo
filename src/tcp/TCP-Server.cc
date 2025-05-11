@@ -49,12 +49,14 @@ TCPServer::TCPServer(EventLoop* loop, const char* ip, const int port) : loop_(lo
           on_close_callback_(conn);
         }
         int fd = conn->fd();
-        // print out peer's info
-        struct sockaddr_in addr_peer;
-        socklen_t addrlength_peer = sizeof(addr_peer);
-        getpeername(fd, (struct sockaddr*)&addr_peer, &addrlength_peer);
-        std::cout << "tid-" << CurrentThread::gettid() << ' ' << "[fd#" << fd << "] " << inet_ntoa(addr_peer.sin_addr)
-                  << ':' << ntohs(addr_peer.sin_port) << " Disconnected" << std::endl;
+
+        /* print out peer's info */
+        // struct sockaddr_in addr_peer;
+        // socklen_t addrlength_peer = sizeof(addr_peer);
+        // getpeername(fd, (struct sockaddr*)&addr_peer, &addrlength_peer);
+        // std::cout << "tid-" << CurrentThread::gettid() << ' ' << "[fd#" << fd << "] " << inet_ntoa(addr_peer.sin_addr)
+        //           << ':' << ntohs(addr_peer.sin_port) << " Disconnected" << std::endl;
+
         // remove the TCPConnection from the conn_map_
         auto it = conn_map_.find(fd);
         if (it == conn_map_.end()) {

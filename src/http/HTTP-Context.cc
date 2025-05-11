@@ -27,7 +27,7 @@ void HTTPContext::reset() {
 
 bool HTTPContext::isComplete() { return state_ == ParseState::COMPLETE; }
 
-HTTPRequest* HTTPContext::getRequest() { return request_.get(); }
+HTTPRequest HTTPContext::getRequest() { return *request_.get(); }
 
 bool isInvalidURLChar(const char& c) {
   // control characters

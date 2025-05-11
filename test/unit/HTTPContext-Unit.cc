@@ -19,24 +19,24 @@ HTTPResponse::Status parse_http_request(const std::string& http_request) {
 
   std::cout << "...................." << std::endl;
 
-  HTTPRequest* request = context->getRequest();
+  HTTPRequest request = context->getRequest();
 
-  std::cout << "method: " << request->methodAsString() << std::endl << std::endl;
-  std::cout << "url: " << request->url() << std::endl;
+  std::cout << "method: " << request.methodAsString() << std::endl << std::endl;
+  std::cout << "url: " << request.url() << std::endl;
   std::cout << "request_params: " << std::endl;
-  for (auto it : request->params()) {
+  for (auto it : request.params()) {
     std::cout << "key: " << it.first << " | "
               << "value: " << it.second << std::endl;
   }
-  std::cout << "protocol: " << request->protocol() << std::endl << std::endl;
-  std::cout << "version: " << request->versionAsString() << std::endl << std::endl;
+  std::cout << "protocol: " << request.protocol() << std::endl << std::endl;
+  std::cout << "version: " << request.versionAsString() << std::endl << std::endl;
   std::cout << "headers: " << std::endl;
-  for (auto it : request->headers()) {
+  for (auto it : request.headers()) {
     std::cout << "key: " << it.first << " | "
               << "value: " << it.second << std::endl;
   }
   std::cout << std::endl;
-  std::cout << "body: " << request->body() << std::endl;
+  std::cout << "body: " << request.body() << std::endl;
 
   delete context;
   context = nullptr;

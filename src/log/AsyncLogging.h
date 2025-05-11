@@ -60,8 +60,9 @@ class AsyncLogging {
   }
 
   // init the g_output & g_flushBeforeAbort
-  static std::shared_ptr<AsyncLogging> init(const std::string& dir = "log", size_t rollSize = 100 * 1024,
-                                            time_t flushInterval = 3) {
+  static std::shared_ptr<AsyncLogging> init(const std::string& dir = "log",
+                                            Logger::LogLevel loglevel = Logger::LogLevel::INFO,
+                                            size_t rollSize = 100 * 1024, time_t flushInterval = 3) {
     std::shared_ptr<AsyncLogging> asyncLogger = std::make_unique<AsyncLogging>(dir, rollSize, flushInterval);
     Logger::setOutput([asyncLogger](const char* msg, int len) { asyncLogger->append(msg, len); });
     Logger::setFlush([asyncLogger]() {
@@ -69,6 +70,7 @@ class AsyncLogging {
         asyncLogger->stop();
       }
     });
+    Logger::setLogLevel(loglevel);
     return asyncLogger;
   }
 };
