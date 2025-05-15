@@ -55,12 +55,10 @@ endif()
 ############################################################
 # make tools
 ############################################################
-
 string(CONCAT CPPSERVER_FORMAT_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/src,"
     "${CMAKE_CURRENT_SOURCE_DIR}/test"
 )
-
 # run clang format and updates files in place, custom target usually won't add to make all target, but ALL option will do so
 add_custom_target(format ALL
     ${CPPSERVER_BUILD_SUPPORT_DIR}/run_clang_format.py
@@ -71,17 +69,16 @@ add_custom_target(format ALL
     --fix
     --quiet
 )
-
 ############################################################
 # compiler setup
 ############################################################
-
 ### compiler flags
 # -fPIC: generate Position Independent Code
 # -stdlib=libc++: use libc++ instead of libstdc++
 # -Wall: enable all compiler warnings
 # -Wextra: enable extra compiler warnings which is more strict than `-Wall`
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -pthread")
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -stdlib=libc++ -Wall -Wextra -pthread")
 # -O0: disable compiler optimizations
 # -ggdb: generate debugging info for the GDB debugger
@@ -90,14 +87,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -pthread")
 # BUG(wzy) disable the ASan, cuz it is not compatible with libc++ and gtest, any throw now will cause ASan error
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls")
-### linker flags
-# -Wl,-rpath,/usr/lib/llvm-17/lib: set the runtime library search path to /usr/lib/llvm-17/lib
-# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,/usr/lib/llvm-17/lib")
-##### Or you can write like this
-# add_compile_options(-stdlib=libc++ ...)
-# add_link_options(-stdlib=libc++ -lc++ -lc++abi ...)
 
-# enable ASan support for libc++
+# ### linker flags
+# ### -Wl,-rpath,/usr/lib/llvm-17/lib: set the runtime library search path to /usr/lib/llvm-17/lib
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,/usr/lib/llvm-17/lib")
+# ### Or you can write like this
+add_compile_options(-stdlib=libc++)
+add_link_options(-stdlib=libc++ -lc++ -lc++abi)
+
+# ### enable ASan support for libc++
 # add_compile_definitions(_LIBCPP_HAS_ASAN)
 
 # generate Position Independent Code is essential for shared libs
@@ -121,4 +119,3 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 # add sub CMakeLists.txt
 add_subdirectory(src)
 add_subdirectory(test)
-
